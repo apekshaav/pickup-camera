@@ -18,14 +18,7 @@
 #include <sstream>
 //#include <Transformer.h>
 
-// for socket connection
-/*#include "socket_files/ClientSocket.h"
-#include "socket_files/SocketException.h"
-#include <iostream>
-#include <string>*/
-
 geometry_msgs::Pose rec_msg_1, rec_msg_2;
-// geometry_msgs::Pose rec_msg_2;
 std::vector<int> isCam, isCoag;
 int camPressed, coagPressed;
 
@@ -86,12 +79,7 @@ int main(int argc, char **argv)
   int count = 0;
   while (ros::ok())
   {
-    //ClientSocket client_socket ( "localhost", 30000 );
-    //std::string reply;
-    //client_socket >> reply;
-    //std::cout << "We received this response from the server:\n\"" << reply << "\"\n";;
-
-
+    
     //////////////////////////////////////////////////////////////////////////////////
     // Transforms                                                                   //
     // ----------                                                                   //
