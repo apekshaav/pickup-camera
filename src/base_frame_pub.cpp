@@ -9,6 +9,7 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <diagnostic_msgs/KeyValue.h>
 #include <sensor_msgs/Joy.h>
 #include <vector>
 #include <tf/tf.h>
@@ -73,9 +74,11 @@ int main(int argc, char **argv)
   ros::Publisher rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
   ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM2/set_desired_state", 1000);
   ros::Publisher MTMR_PSM1_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM1/set_desired_state", 1000);
+  // ros::Publisher switch_pub = n.advertise<diagnostic_msgs::KeyValue>("/dvrk/console/teleop/select_teleop_psm", 1000);
 
   ros::Rate loop_rate(10);
 
+  int ct = 1; 
   int count = 0;
   while (ros::ok())
   {
@@ -266,16 +269,6 @@ int main(int argc, char **argv)
     std_msgs::String MTML_PSM2_State, MTMR_PSM1_State;
     std::stringstream s1, s2;
 
-    // camera footpedal - left - MTML-PSM2 teleop
-    
- //    // first time pedal is pressed, must set arms state first before aligning
-	// if count==0
-	// {
-	// 	std::stringstream ss;
-	// 	ss << "SETTING_ARMS_STATE";
-	// 	MTML_PSM2_State.data = s1.str();
-	// 	MTML_PSM2_pub.publish(MTML_PSM2_State);
-	// }
 
     if (camPressed == 1)
     {	
@@ -308,6 +301,55 @@ int main(int argc, char **argv)
 	}
 
 	MTMR_PSM1_pub.publish(MTMR_PSM1_State);
+
+    // diagnostic_msgs::KeyValue teleopPair;
+    // // switching teleop pairs when camera footpedal is pressed
+    // if (camPressed == 1)
+    // {	
+    // 	if (ct%2==1)
+    //   {
+    //     teleopPair.key = "MTML";
+    //     teleopPair.value = "";
+    //     switch_pub.publish(teleopPair);
+    //     ROS_INFO("Switching has begun...");
+    //     ros::Duration(0.25).sleep(); // sleep for quarter a second
+
+    //     teleopPair.key = "MTMR";
+    //     teleopPair.value = "PSM2";
+    //     switch_pub.publish(teleopPair);
+    //     // ROS_INFO("...");
+    //     ros::Duration(0.25).sleep(); // sleep for quarter a second
+
+    //     teleopPair.key = "MTML";
+    //     teleopPair.value = "PSM1";
+    //     switch_pub.publish(teleopPair);
+    //     ROS_INFO("Switching has finished.");
+    //     ros::Duration(0.25).sleep(); // sleep for quater a second  
+    //   }
+    //   else
+    //   {
+    //     teleopPair.key = "MTML";
+    //     teleopPair.value = "";
+    //     switch_pub.publish(teleopPair);
+    //     ROS_INFO("Switching has begun...");
+    //     ros::Duration(0.25).sleep(); // sleep for quarter a second
+
+    //     teleopPair.key = "MTMR";
+    //     teleopPair.value = "PSM1";
+    //     switch_pub.publish(teleopPair);
+    //     // ROS_INFO("...");
+    //     ros::Duration(0.25).sleep(); // sleep for quarter a second
+
+    //     teleopPair.key = "MTML";
+    //     teleopPair.value = "PSM2";
+    //     switch_pub.publish(teleopPair);
+    //     ROS_INFO("Switching has finished.");
+    //     ros::Duration(0.25).sleep(); // sleep for quater a second  
+    //   }
+    //   ct++;
+    // }
+
+
 
 	count = count + 1;
 

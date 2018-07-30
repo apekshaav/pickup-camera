@@ -204,8 +204,10 @@ include_directories(
 
 add_executable(base_frame_pub src/base_frame_pub.cpp)
 add_executable(vis_frames src/vis_frames.cpp)
-#add_executable(server src/simple_server_main.cpp src/ServerSocket.cpp src/Socket.cpp)
+add_executable(ecm_pub src/ecm_pub.cpp)
 target_link_libraries(base_frame_pub ${catkin_LIBRARIES})
 target_link_libraries(vis_frames ${catkin_LIBRARIES})
+target_link_libraries(ecm_pub ${catkin_LIBRARIES})
 add_dependencies(base_frame_pub pickup_camera_generate_messages_cpp)
 add_dependencies(vis_frames pickup_camera_generate_messages_cpp)
+add_dependencies(ecm_pub pickup_camera_generate_messages_cpp)
