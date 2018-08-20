@@ -3,6 +3,8 @@
  * for a da Vinci PSM with respect to a pick-up camera held by another PSM.
  */
 
+#include <vector>
+#include <sstream>
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
@@ -11,12 +13,11 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <diagnostic_msgs/KeyValue.h>
 #include <sensor_msgs/Joy.h>
-#include <vector>
+
 #include <tf/tf.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
 
-#include <sstream>
 
 geometry_msgs::Pose rec_msg_1, rec_msg_2;
 std::vector<int> isCam, isCoag, isHead;
@@ -97,6 +98,7 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(10);
 
   int switchCount = 1; 
+  int baseFrameCount = 0;
   int regRotFlag = 0;
   while (ros::ok())
   {
@@ -249,9 +251,15 @@ int main(int argc, char **argv)
 
 
     // ROS_INFO("Position: [%f %f %f] Orientation: [%f %f %f %f]", msg.position.x, msg.position.y, msg.position.z, msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z);
-    //ROS_INFO("Updating base frame of PSM 2...");
+    if (baseFrameCount%10==0)
+    	ROS_INFO("Updating base frame of PSM 2...");
+    baseFrameCount++;
 
-    //transform_pub.publish(msg);
+    //clearing and resetting every 1000 times
+    if (baseFrameCount==1000)
+    	baseFrameCount = 0;
+
+    transform_pub.publish(msg);
 
     // sending transforms to visualize on rviz
     br.sendTransform(tf_H_Cam_Tool1);
@@ -271,7 +279,7 @@ int main(int argc, char **argv)
     	regRotFlag = 1;
     }
 
-    //rot_pub.publish(q);
+    rot_pub.publish(q);
 
 
     // During teleoperation:
