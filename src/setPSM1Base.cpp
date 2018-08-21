@@ -128,13 +128,14 @@ int main(int argc, char **argv)
 
     // for H_Base1_Base2 - from MATLAB script
     geometry_msgs::Pose temp;
-    temp.position.x = 0.0;
-    temp.position.y = 0.0;
-    temp.position.z = 0.0;
-    temp.orientation.w = 1.0;
-    temp.orientation.x = 0.0;
-    temp.orientation.y = 0.0;
-    temp.orientation.z = 0.0;
+    temp.position.x = -0.0786;
+    temp.position.y = 0.2314;
+    temp.position.z = -0.0159;
+    temp.orientation.w = 0.4072;
+    temp.orientation.x = -0.0133;
+    temp.orientation.y = -0.0025;
+    temp.orientation.z = -0.9132;
+
     
     tf::Pose H_Base1_Base2;
     tf::poseMsgToTF(temp, H_Base1_Base2);     
@@ -143,7 +144,7 @@ int main(int argc, char **argv)
     // from solidworks model:
     // for H_Tool2_Cam
     geometry_msgs::Pose temp1;
-    temp1.position.x = 0.0;
+    temp1.position.x = 0.027;
     temp1.position.y = 0.0;
     temp1.position.z = 0.0;
     temp1.orientation.w = 1; //0.7071;
@@ -254,8 +255,8 @@ int main(int argc, char **argv)
     // setting registration rotation of MTMR-PSM1 (pickup camera arm)
     geometry_msgs::Quaternion q;
     q.w = 0;
-    q.x = 0;
-    q.y = 1;
+    q.x = 1;
+    q.y = 0;
     q.z = 0;
 
     rot_pub.publish(q);
