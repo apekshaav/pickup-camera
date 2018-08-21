@@ -41,8 +41,8 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "visualize");
   ros::NodeHandle n;
 
-  ros::Subscriber sub_1 = n.subscribe("/dvrk/PSM1/position_cartesian_local_current", 1000, callbackPSM1);
-  ros::Subscriber sub_2 = n.subscribe("/dvrk/PSM2/position_cartesian_local_current", 1000, callbackPSM2);
+  ros::Subscriber sub_1 = n.subscribe("/dvrk/PSM1/position_cartesian_current", 1000, callbackPSM1);
+  ros::Subscriber sub_2 = n.subscribe("/dvrk/PSM2/position_cartesian_current", 1000, callbackPSM2);
 
   ros::Rate loop_rate(10);
 
@@ -62,6 +62,7 @@ int main(int argc, char **argv)
     // H_Base2_Tool2  : Base 2 to Tooltip 2                                         //
     // H_Tool1_Cam    : Tooltip 1 to Pick-Up Camera                                 //
     // H_Cam          : Final Transform - Base 2 to Pick-Up Camera                  //
+    // H_ECM_W        : ECM tip to World
     //////////////////////////////////////////////////////////////////////////////////
 
     // creating object to broadcast transforms 
@@ -74,13 +75,13 @@ int main(int argc, char **argv)
     tf_H_Base1_W.header.stamp = ros::Time::now();
     tf_H_Base1_W.header.frame_id = "world";
     tf_H_Base1_W.child_frame_id = "base1";
-    tf_H_Base1_W.transform.translation.x = -0.0278;
-    tf_H_Base1_W.transform.translation.y = -0.0425;
-    tf_H_Base1_W.transform.translation.z = 0.1627;
-    tf_H_Base1_W.transform.rotation.w = 0.9741;
-    tf_H_Base1_W.transform.rotation.x = -0.0841;
-    tf_H_Base1_W.transform.rotation.y = -0.1222;
-    tf_H_Base1_W.transform.rotation.z = -0.1705;
+    tf_H_Base1_W.transform.translation.x = -0.1178;
+    tf_H_Base1_W.transform.translation.y = 0.1124;
+    tf_H_Base1_W.transform.translation.z = 0.1769;
+    tf_H_Base1_W.transform.rotation.w = 0.3547;
+    tf_H_Base1_W.transform.rotation.x = -0.8216;
+    tf_H_Base1_W.transform.rotation.y = -0.4232;
+    tf_H_Base1_W.transform.rotation.z = -0.1419;
     
   
     // for H_Base2_W (base frame of PSM2 wrt world)
@@ -89,14 +90,29 @@ int main(int argc, char **argv)
     tf_H_Base2_W.header.stamp = ros::Time::now();
     tf_H_Base2_W.header.frame_id = "world";
     tf_H_Base2_W.child_frame_id = "base2";
-    tf_H_Base2_W.transform.translation.x = 0.1243;
-    tf_H_Base2_W.transform.translation.y = 0.0050;
-    tf_H_Base2_W.transform.translation.z = 0.1882;
-    tf_H_Base2_W.transform.rotation.w = 0.9520;
-    tf_H_Base2_W.transform.rotation.x = -0.0621;
-    tf_H_Base2_W.transform.rotation.y = 0.0434;
-    tf_H_Base2_W.transform.rotation.z = 0.2964;
+    tf_H_Base2_W.transform.translation.x = 0.1230;
+    tf_H_Base2_W.transform.translation.y = 0.1106;
+    tf_H_Base2_W.transform.translation.z = 0.1324;
+    tf_H_Base2_W.transform.rotation.w = 0.2860;
+    tf_H_Base2_W.transform.rotation.x = -0.7160;
+    tf_H_Base2_W.transform.rotation.y = 0.5770;
+    tf_H_Base2_W.transform.rotation.z = 0.2696;
+
+
+    // for H_ECM_W (tip of ECM wrt world)
+    geometry_msgs::TransformStamped tf_H_ECM_W;
   
+    tf_H_ECM_W.header.stamp = ros::Time::now();
+    tf_H_ECM_W.header.frame_id = "world";
+    tf_H_ECM_W.child_frame_id = "ECM";
+    tf_H_ECM_W.transform.translation.x = -0.0695;
+    tf_H_ECM_W.transform.translation.y = 1.1497;
+    tf_H_ECM_W.transform.translation.z = 1.0268;
+    tf_H_ECM_W.transform.rotation.w = 0.3953;
+    tf_H_ECM_W.transform.rotation.x = 0.9182;
+    tf_H_ECM_W.transform.rotation.y = 0.0176;
+    tf_H_ECM_W.transform.rotation.z = -0.0166;
+      
 
     // using data retrieved from subscriber
     tf::Pose H_Tool1_Base1;
@@ -153,6 +169,7 @@ int main(int argc, char **argv)
     ROS_INFO("Publishing...");
     br.sendTransform(tf_H_Base1_W);
     br.sendTransform(tf_H_Base2_W);
+    br.sendTransform(tf_H_ECM_W);
     br.sendTransform(tf_H_Tool1_Base1);
     br.sendTransform(tf_H_Tool2_Base2);
 

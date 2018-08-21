@@ -144,11 +144,11 @@ int main(int argc, char **argv)
     // from solidworks model:
     // for H_Tool2_Cam
     geometry_msgs::Pose temp1;
-    temp1.position.x = 0.027;
+    temp1.position.x = 0.035; //0.02645;
     temp1.position.y = 0.0;
     temp1.position.z = 0.0;
-    temp1.orientation.w = 1; //0.7071;
-    temp1.orientation.x = 0; //0.7071;
+    temp1.orientation.w = 0.9659; //1;
+    temp1.orientation.x = -0.2588; //0; 
     temp1.orientation.y = 0.0;
     temp1.orientation.z = 0.0;
     
