@@ -10,6 +10,7 @@
 #include <vector>
 #include <sstream>
 
+// ROS
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <geometry_msgs/Pose.h>
@@ -18,6 +19,7 @@
 #include <diagnostic_msgs/KeyValue.h>
 #include <sensor_msgs/Joy.h>
 
+// TF
 #include <tf/tf.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
@@ -82,7 +84,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
 
   // subscribers
-  ros::Subscriber sub1 = n.subscribe("/dvrk/PSM1/position_cartesian_current", 1000, callbackPSM1);
+  ros::Subscriber sub1 = n.subscribe("/dvrk/PSM1/position_cartesian_current", 1000, callbackPSM1); // we want position data, including base frame
   ros::Subscriber sub2 = n.subscribe("/dvrk/PSM2/position_cartesian_local_current", 1000, callbackPSM2);
   ros::Subscriber cam_sub = n.subscribe("/dvrk/footpedals/camera", 1000, callbackCam);
   ros::Subscriber coag_sub = n.subscribe("/dvrk/footpedals/coag", 1000, callbackCoag);
@@ -192,14 +194,6 @@ int main(int argc, char **argv)
     tf::Transform H_Base2_Tool2 = H_Tool2_Base2.inverse();
 
     // RO2_INFO("2: Position: [%f %f %f] Orientation: [%f %f %f %f]", H_Base2_Tool2.getOrigi2().getX(), H2Base2_Tool2.getOrigi2().getY(), H2Base2_Tool2.getOrigi2().getZ(), H2Base2_Tool2.getRotat2on().w(), H_2ase2_Tool2.getRotat2on().x(), H_2ase2_Tool2.getRotat2on().y(), H_2ase2_Tool2.getRotat2on().z());
-  
-
-    // tf::Transform T1;
-    // T1.mult(H_Base2_Tool2, H_Base12Base2);
-
-    // tf::Transform H_Cam;
-    // H_Cam.mult(H_Tool2_Cam, T1);
-
 
     // Tooltip 1 position (including base frame, ie., wrt camera. That's why subscribed topic is NOT local.)
     tf::Pose H_Tool1;
@@ -241,7 +235,9 @@ int main(int argc, char **argv)
     tf_H_Cam_Base1.transform.rotation.z = H_Cam_Base1.getRotation().z();
 
 
+    transform_pub.publish(msg);
     // ROS_INFO("Position: [%f %f %f] Orientation: [%f %f %f %f]", msg.position.x, msg.position.y, msg.position.z, msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z);
+
     if (baseFrameCount%10==0)
     	ROS_INFO("Updating base frame of PSM 1...");
     baseFrameCount++;
@@ -250,19 +246,19 @@ int main(int argc, char **argv)
     if (baseFrameCount==1000)
     	baseFrameCount = 0;
 
-    transform_pub.publish(msg);
-
     // sending transforms to visualize on rviz
     br.sendTransform(tf_H_Cam_Tool2);
     br.sendTransform(tf_H_Cam_Base1);
     br.sendTransform(tf_H_Tool1);
 
-    // setting registration rotation of MTMR-PSM1
+    // setting registration rotation of MTMR-PSM1 (pickup camera arm)
     geometry_msgs::Quaternion q;
     q.w = 0;
     q.x = 0;
     q.y = 1;
     q.z = 0;
+
+    rot_pub.publish(q);
 
     if(regRotFlag==0)
     {
@@ -270,9 +266,8 @@ int main(int argc, char **argv)
     	regRotFlag = 1;
     }
 
-    rot_pub.publish(q);
 
-
+    // TELEOPERATION LOGIC ------------
     // During teleoperation:
     // * Head sensor is required to enable teleoperation of both teleop pairs MTML-PSM2 (camera arm) and MTMR-PSM1 (tool arm)
     //		- Callback to subscribe to topic /dvrk/footpedals/operatorpresent.
@@ -296,24 +291,24 @@ int main(int argc, char **argv)
     	// checking if CAMERA footpedal has been pressed
     	if (camPressed == 1)
     	{
-    		// enabling MTML-PSM2 teleop // enabling pickup camera arm teleop
+    		// enabling MTMx-PSM2 teleop // enabling pickup camera arm teleop
     		s1 << "ENABLED";
     		MTML_PSM2_State.data = s1.str();
     		MTMR_PSM2_State.data = s1.str();
 
-    		// freezing MTMR-PSM1 teleop // freezing non-pickup camera arm teleop
+    		// freezing MTMx-PSM1 teleop // freezing non-pickup camera arm teleop
     		s2 << "ALIGNING_MTM";
   	    	MTMR_PSM1_State.data = s2.str();
   	    	MTML_PSM1_State.data = s2.str();
     	}
     	else
     	{
-    		// freezing MTML-PSM2 teleop // freezing pickup camera arm teleop
+    		// freezing MTMx-PSM2 teleop // freezing pickup camera arm teleop
     		s1 << "ALIGNING_MTM";
     		MTML_PSM2_State.data = s1.str();
     		MTMR_PSM2_State.data = s1.str();
 
-    		// enabling MTMR-PSM1 teleop // enabling non-pickup camera arm teleop
+    		// enabling MTMx-PSM1 teleop // enabling non-pickup camera arm teleop
     		s2 << "ENABLED";
   	    	MTMR_PSM1_State.data = s2.str();
   	    	MTML_PSM1_State.data = s2.str();
@@ -398,40 +393,6 @@ int main(int argc, char **argv)
       switchCount++;
       ros::Duration(0.25).sleep();
     }
-
-////////////////////////////////// old teleop code:
- //    if (camPressed == 1)
- //    {	
- //    	s1 << "ENABLED";
- //  	    MTML_PSM2_State.data = s1.str();
- //    	// ROS_INFO("MTML_PSM2_State: %s", MTML_PSM2_State.data.c_str());
- //    }
-	// else
-	// {
-	// 	s1 << "ALIGNING_MTM";
-	// 	MTML_PSM2_State.data = s1.str();
-	// 	// ROS_INFO("MTML_PSM2_State: %s", MTML_PSM2_State.data.c_str());
-	// }
-
-	// MTML_PSM2_pub.publish(MTML_PSM2_State);
-
-
-	// // coag footpedal - right - MTMR-PSM1 teleop
- //    if (coagPressed == 1)
- //    {
- //    	s2 << "ENABLED";
- //    	MTMR_PSM1_State.data = s2.str();
- //    	// ROS_INFO("MTMR_PSM1_State: %s", MTMR_PSM1_State.data.c_str());
- //    }
-	// else
-	// {
-	// 	s2 << "ALIGNING_MTM";
-	// 	MTMR_PSM1_State.data = s2.str();
-	// 	// ROS_INFO("MTMR_PSM1_State: %s", MTMR_PSM1_State.data.c_str());
-	// }
-
-	// MTMR_PSM1_pub.publish(MTMR_PSM1_State);
-//////////////////////////////////
 
 
     ros::spinOnce();
