@@ -73,9 +73,9 @@ int main(int argc, char **argv)
     // setting registration rotation of MTMR-PSM1
     geometry_msgs::Quaternion q;
     q.w = 0;
-    q.x = 1; //1;
-    q.y = 0; //0;
-    q.z = 0;
+    q.x = 0;
+    q.y = -0.7071; 
+    q.z = 0.7071;
 
     rot_pub.publish(q);
 
