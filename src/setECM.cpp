@@ -1,6 +1,6 @@
 /**
  * This script is used to send the transform (position, quaternion) to set the base transform 
- * of the da Vinci PSM1 (Yellow Arm) with respect to the endoscope (ECM tip coordinate frame).
+ * of the two da Vinci arms PSM2 (Green Arm) and PSM3 (Red Arm) with respect to the endoscope (ECM tip coordinate frame).
  */
 
 #include <vector>
@@ -29,15 +29,19 @@ void callbackHead(const sensor_msgs::Joy::ConstPtr& msg)
 int main(int argc, char **argv)
 {
   
-  ros::init(argc, argv, "setPSM1Base_toECM");
+  ros::init(argc, argv, "setECM");
   ros::NodeHandle n;
 
   // subscribers
   ros::Subscriber head_sub = n.subscribe("/dvrk/footpedals/operatorpresent", 1000, callbackHead);
   
   // publishers
-  ros::Publisher ECM_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM1/set_base_frame", 1000);
-  ros::Publisher rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM1/set_registration_rotation", 1000);
+  ros::Publisher psm2_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM2/set_base_frame", 1000);
+  ros::Publisher psm3_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM3/set_base_frame", 1000);
+  
+  ros::Publisher psm2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
+  ros::Publisher psm3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM3/set_registration_rotation", 1000);
+
   ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM2/set_desired_state", 1000);
   ros::Publisher MTMR_PSM1_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM1/set_desired_state", 1000);
   
@@ -49,39 +53,59 @@ int main(int argc, char **argv)
   while (ros::ok())
   {
     
-    // transform from da Vinci world frame to ECM tip frame
-    geometry_msgs::Pose msg;
-    msg.position.x = -0.0305;
-    msg.position.y = 0.0937;
-    msg.position.z = 1.3383;
-    msg.orientation.w =  0.6193;
-    msg.orientation.x = 0.6410;
-    msg.orientation.y = 0.3174;
-    msg.orientation.z = -0.3239;
+    // transform from ECM tip frame to PSM2 Base Frame
+    geometry_msgs::Pose msg2;
+    msg2.position.x = ;
+    msg2.position.y = ;
+    msg2.position.z = ;
+    msg2.orientation.w = ;
+    msg2.orientation.x = ;
+    msg2.orientation.y = ;
+    msg2.orientation.z = ;
+
+
+    // transform from ECM tip frame to PSM3 Base Frame
+    geometry_msgs::Pose msg3;
+    msg3.position.x = ;
+    msg3.position.y = ;
+    msg3.position.z = ;
+    msg3.orientation.w = ;
+    msg3.orientation.x = ;
+    msg3.orientation.y = ;
+    msg3.orientation.z = ;
 
     if (baseFrameCount%10==0)
-        // ROS_INFO("Position: [%f %f %f] Orientation: [%f %f %f %f]", msg.position.x, msg.position.y, msg.position.z, msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z);
-      ROS_INFO("Updating base frame of PSM 1...");
+      ROS_INFO("Updating base frame of PSM 2 and PSM3...");
     baseFrameCount++;
 
     //clearing and resetting every 1000 times
     if (baseFrameCount==1000)
         baseFrameCount = 0;
 
-    ECM_pub.publish(msg);
+    psm2_pub.publish(msg2);
+    psm3_pub.publish(msg3);
 
-    // setting registration rotation of MTMR-PSM1
-    geometry_msgs::Quaternion q;
-    q.w = 0;
-    q.x = 0;
-    q.y = -0.7071; 
-    q.z = 0.7071;
+    // setting registration rotation of MTML-PSM2
+    geometry_msgs::Quaternion q2;
+    q2.w = 0;
+    q2.x = 0;
+    q2.y = -0.7071; 
+    q2.z = 0.7071;
 
-    rot_pub.publish(q);
+    psm2_rot_pub.publish(q2);
+
+    // setting registration rotation of MTMR-PSM3
+    geometry_msgs::Quaternion q3;
+    q3.w = 0;
+    q3.x = 0;
+    q3.y = -0.7071; 
+    q3.z = 0.7071;
+
+    psm3_rot_pub.publish(q3);
 
     if(regRotFlag==0)
     {
-    	ROS_INFO("Setting registration rotation for MTMR-PSM1");
+    	ROS_INFO("Setting registration rotation for both teleop pairs");
       regRotFlag = 1;
     }
 
@@ -92,7 +116,7 @@ int main(int argc, char **argv)
     //    - The messages received are the form sensor_msgs/Joy. The 'buttons' value indicates head sensed (1) or not (0).
     // * MTML-PSM2 (non-camera arm) remains frozen all the time, even when head is sensed.
 
-    std_msgs::String MTML_PSM2_State, MTMR_PSM1_State;
+    /*std_msgs::String MTML_PSM2_State, MTMR_PSM1_State;
     std::stringstream s1, s2, ss;
 
     // checking for presence of operator (head)
@@ -116,7 +140,8 @@ int main(int argc, char **argv)
 
     MTMR_PSM1_pub.publish(MTMR_PSM1_State);
     MTML_PSM2_pub.publish(MTML_PSM2_State); 
-
+    */
+    
     ros::spinOnce();
 
     loop_rate.sleep();

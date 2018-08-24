@@ -202,18 +202,14 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(base_frame_pub src/base_frame_pub.cpp)
-add_executable(setPSM1Base src/setPSM1Base.cpp)
+add_executable(setPickup src/setPickup.cpp)
 add_executable(vis_frames src/vis_frames.cpp)
-add_executable(ecm_pub src/ecm_pub.cpp)
-add_executable(setPSM1Base_toECM src/setPSM1Base_toECM.cpp)
-target_link_libraries(base_frame_pub ${catkin_LIBRARIES})
-target_link_libraries(setPSM1Base ${catkin_LIBRARIES})
+add_executable(setECM src/setECM.cpp)
+
+target_link_libraries(setPickup ${catkin_LIBRARIES})
 target_link_libraries(vis_frames ${catkin_LIBRARIES})
-target_link_libraries(ecm_pub ${catkin_LIBRARIES})
-target_link_libraries(setPSM1Base_toECM ${catkin_LIBRARIES})
-add_dependencies(base_frame_pub pickup_camera_generate_messages_cpp)
-add_dependencies(setPSM1Base pickup_camera_generate_messages_cpp)
+target_link_libraries(setECM ${catkin_LIBRARIES})
+
+add_dependencies(setPickup pickup_camera_generate_messages_cpp)
 add_dependencies(vis_frames pickup_camera_generate_messages_cpp)
-add_dependencies(ecm_pub pickup_camera_generate_messages_cpp)
-add_dependencies(setPSM1Base_toECM pickup_camera_generate_messages_cpp)
+add_dependencies(setECM pickup_camera_generate_messages_cpp)
