@@ -72,13 +72,13 @@ int main(int argc, char **argv)
     tf_H_Base1_W.header.stamp = ros::Time::now();
     tf_H_Base1_W.header.frame_id = "world";
     tf_H_Base1_W.child_frame_id = "base1";
-    tf_H_Base1_W.transform.translation.x = ;
-    tf_H_Base1_W.transform.translation.y = ;
-    tf_H_Base1_W.transform.translation.z = ;
-    tf_H_Base1_W.transform.rotation.w = ;
-    tf_H_Base1_W.transform.rotation.x = ;
-    tf_H_Base1_W.transform.rotation.y = ;
-    tf_H_Base1_W.transform.rotation.z = ;
+    tf_H_Base1_W.transform.translation.x = -0.0962;
+    tf_H_Base1_W.transform.translation.y = 0.2701;
+    tf_H_Base1_W.transform.translation.z = 0.2053;
+    tf_H_Base1_W.transform.rotation.w = 0.3515;
+    tf_H_Base1_W.transform.rotation.x = -0.8605;
+    tf_H_Base1_W.transform.rotation.y = -0.3373;
+    tf_H_Base1_W.transform.rotation.z = -0.1489;
     
   
     // for H_Base2_W (base frame of PSM2 wrt world)
@@ -87,13 +87,13 @@ int main(int argc, char **argv)
     tf_H_Base2_W.header.stamp = ros::Time::now();
     tf_H_Base2_W.header.frame_id = "world";
     tf_H_Base2_W.child_frame_id = "base2";
-    tf_H_Base2_W.transform.translation.x = ;
-    tf_H_Base2_W.transform.translation.y = ;
-    tf_H_Base2_W.transform.translation.z = ;
-    tf_H_Base2_W.transform.rotation.w = ;
-    tf_H_Base2_W.transform.rotation.x = ;
-    tf_H_Base2_W.transform.rotation.y = ;
-    tf_H_Base2_W.transform.rotation.z = ;
+    tf_H_Base2_W.transform.translation.x = 0.0982;
+    tf_H_Base2_W.transform.translation.y = 0.0876;
+    tf_H_Base2_W.transform.translation.z = 0.1109;
+    tf_H_Base2_W.transform.rotation.w = 0.2722;
+    tf_H_Base2_W.transform.rotation.x = -0.7838;
+    tf_H_Base2_W.transform.rotation.y = 0.5167;
+    tf_H_Base2_W.transform.rotation.z = 0.2111;
 
     // for H_Base2_W (base frame of PSM3 wrt world)
     geometry_msgs::TransformStamped tf_H_Base3_W;
@@ -101,13 +101,13 @@ int main(int argc, char **argv)
     tf_H_Base3_W.header.stamp = ros::Time::now();
     tf_H_Base3_W.header.frame_id = "world";
     tf_H_Base3_W.child_frame_id = "base3";
-    tf_H_Base3_W.transform.translation.x = ;
-    tf_H_Base3_W.transform.translation.y = ;
-    tf_H_Base3_W.transform.translation.z = ;
-    tf_H_Base3_W.transform.rotation.w = ;
-    tf_H_Base3_W.transform.rotation.x = ;
-    tf_H_Base3_W.transform.rotation.y = ;
-    tf_H_Base3_W.transform.rotation.z = ;
+    tf_H_Base3_W.transform.translation.x = -0.1228;
+    tf_H_Base3_W.transform.translation.y = 0.2851;
+    tf_H_Base3_W.transform.translation.z = -0.1305;
+    tf_H_Base3_W.transform.rotation.w = 0.3018;
+    tf_H_Base3_W.transform.rotation.x = -0.7556;
+    tf_H_Base3_W.transform.rotation.y = -0.5455;
+    tf_H_Base3_W.transform.rotation.z = -0.2009;
 
 
     // for H_ECM_W (tip of ECM wrt world)
@@ -116,13 +116,13 @@ int main(int argc, char **argv)
     tf_H_ECM_W.header.stamp = ros::Time::now();
     tf_H_ECM_W.header.frame_id = "world";
     tf_H_ECM_W.child_frame_id = "ECM";
-    tf_H_ECM_W.transform.translation.x = ;
-    tf_H_ECM_W.transform.translation.y = ;
-    tf_H_ECM_W.transform.translation.z = ;
-    tf_H_ECM_W.transform.rotation.w = ;
-    tf_H_ECM_W.transform.rotation.x = ;
-    tf_H_ECM_W.transform.rotation.y = ;
-    tf_H_ECM_W.transform.rotation.z = ;
+    tf_H_ECM_W.transform.translation.x = -0.0564;
+    tf_H_ECM_W.transform.translation.y = 1.2975;
+    tf_H_ECM_W.transform.translation.z = 0.9983;
+    tf_H_ECM_W.transform.rotation.w = 0.3627;
+    tf_H_ECM_W.transform.rotation.x = 0.9316;
+    tf_H_ECM_W.transform.rotation.y = -0.0173;
+    tf_H_ECM_W.transform.rotation.z = -0.0182;
       
 
     // using data retrieved from subscriber

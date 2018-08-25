@@ -10,6 +10,7 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <geometry_msgs/Pose.h>
+#include <diagnostic_msgs/KeyValue.h>
 #include <sensor_msgs/Joy.h>
 
 // TF
@@ -44,35 +45,68 @@ int main(int argc, char **argv)
 
   ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM2/set_desired_state", 1000);
   ros::Publisher MTMR_PSM1_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM1/set_desired_state", 1000);
+
+  // ros::Publisher switch_pub = n.advertise<std_msgs::String>("/switch", 1000);
+  ros::Publisher teleop_switch_pub = n.advertise<diagnostic_msgs::KeyValue>("/dvrk/console/teleop/select_teleop_psm", 1000);
   
   
   ros::Rate loop_rate(10);
   
+  int switchFlag = 0;
   int baseFrameCount = 0;
   int regRotFlag = 0;
   while (ros::ok())
   {
     
-    // transform from ECM tip frame to PSM2 Base Frame
+
+  	//setting initial teleop pairs to MTML-PSM2 and MTMR-PSM3
+	diagnostic_msgs::KeyValue teleopPair;
+    if (switchFlag == 0)
+    {	
+
+      ros::Duration(1.5).sleep();
+      teleopPair.key = "MTML";
+      teleopPair.value = "";
+      teleop_switch_pub.publish(teleopPair);
+      ROS_INFO("Switching has begun...");
+      ros::Duration(1).sleep(); // sleep for a second
+
+      teleopPair.key = "MTMR";
+      teleopPair.value = "PSM3";
+      teleop_switch_pub.publish(teleopPair);
+      // ROS_INFO("...");
+      ros::Duration(1).sleep(); // sleep for a second
+
+      teleopPair.key = "MTML";
+      teleopPair.value = "PSM2";
+      teleop_switch_pub.publish(teleopPair);
+      ROS_INFO("Switching has finished.");
+      ros::Duration(1).sleep(); // sleep for a second  
+
+      switchFlag = 1;
+    }
+    
+
+    // transform from PSM2 Base Frame to ECM tip frame
     geometry_msgs::Pose msg2;
-    msg2.position.x = ;
-    msg2.position.y = ;
-    msg2.position.z = ;
-    msg2.orientation.w = ;
-    msg2.orientation.x = ;
-    msg2.orientation.y = ;
-    msg2.orientation.z = ;
+    msg2.position.x = 0.2282;
+    msg2.position.y = 0.2876;
+    msg2.position.z = 1.4630;
+    msg2.orientation.w = 0.6442;
+    msg2.orientation.x = 0.5436;
+    msg2.orientation.y = -0.3745;
+    msg2.orientation.z = 0.3862;
 
 
-    // transform from ECM tip frame to PSM3 Base Frame
+    // transform from PSM3 Base Frame to ECM tip frame
     geometry_msgs::Pose msg3;
-    msg3.position.x = ;
-    msg3.position.y = ;
-    msg3.position.z = ;
-    msg3.orientation.w = ;
-    msg3.orientation.x = ;
-    msg3.orientation.y = ;
-    msg3.orientation.z = ;
+    msg3.position.x = 0.0037;
+    msg3.position.y = -0.0169;
+    msg3.position.z = 1.5176;
+    msg3.orientation.w = 0.5814;
+    msg3.orientation.x = 0.5487;
+    msg3.orientation.y = 0.3935;
+    msg3.orientation.z = -0.4539;
 
     if (baseFrameCount%10==0)
       ROS_INFO("Updating base frame of PSM 2 and PSM3...");

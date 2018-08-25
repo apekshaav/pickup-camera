@@ -86,22 +86,23 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
 
   // subscribers
+  ros::Subscriber sub1 = n.subscribe("/dvrk/PSM1/position_cartesian_local_current", 1000, callbackPSM1);
   ros::Subscriber sub2 = n.subscribe("/dvrk/PSM2/position_cartesian_current", 1000, callbackPSM2); // we want position data, including base frame
   ros::Subscriber sub3 = n.subscribe("/dvrk/PSM3/position_cartesian_current", 1000, callbackPSM3); // we want position data, including base frame
-  
-  ros::Subscriber sub1 = n.subscribe("/dvrk/PSM1/position_cartesian_local_current", 1000, callbackPSM1);
 
   ros::Subscriber cam_sub = n.subscribe("/dvrk/footpedals/camera", 1000, callbackCam);
   ros::Subscriber head_sub = n.subscribe("/dvrk/footpedals/operatorpresent", 1000, callbackHead);
-
   ros::Subscriber switch_sub = n.subscribe("/switch", 1000, callbackSwitch);
   
   // publishers
   ros::Publisher psm2_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM2/set_base_frame", 1000);
   ros::Publisher psm3_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM3/set_base_frame", 1000);
   
-  ros::Publisher psm2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
-  ros::Publisher psm3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM3/set_registration_rotation", 1000);
+  ros::Publisher MTML_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
+  ros::Publisher MTMR_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM3/set_registration_rotation", 1000);
+
+  ros::Publisher MTMR_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM2/set_registration_rotation", 1000);
+  ros::Publisher MTML_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM3/set_registration_rotation", 1000);
   
   ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM2/set_desired_state", 1000);
   ros::Publisher MTMR_PSM3_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM3/set_desired_state", 1000);
@@ -112,7 +113,8 @@ int main(int argc, char **argv)
 
   ros::Rate loop_rate(10);
 
-  int switchCount = 1; 
+  int switchFlag = 0;
+  int switchCount = 0; 
   int baseFrameCount = 0;
   int regRotFlag = 0;
   while (ros::ok())
@@ -135,31 +137,76 @@ int main(int argc, char **argv)
     // H_Base3_Cam    : Final Transform - Base 3 to Pick-Up Camera                  //
     //////////////////////////////////////////////////////////////////////////////////
 
+    
+    // setting intial teleop pairs to MTML-PSM3 and MTMR-PSM2
+    diagnostic_msgs::KeyValue teleopPairInitial;
+    if (switchFlag == 0)
+    {	
+        switchFlag = 1;
+        
+        ros::Duration(1.5).sleep();
+        teleopPairInitial.key = "MTML";
+        teleopPairInitial.value = "";
+        teleop_switch_pub.publish(teleopPairInitial);
+        ROS_INFO("Switching has begun...");
+        ros::Duration(1.5).sleep(); // sleep for a second
+
+        teleopPairInitial.key = "MTMR";
+        teleopPairInitial.value = "PSM2";
+        teleop_switch_pub.publish(teleopPairInitial);
+        // ROS_INFO("...");
+        ros::Duration(1.5).sleep(); // sleep for a second
+
+        teleopPairInitial.key = "MTML";
+        teleopPairInitial.value = "PSM3";
+        teleop_switch_pub.publish(teleopPairInitial);
+        ROS_INFO("Switching has finished.");
+        ros::Duration(1.5).sleep(); // sleep for a second  
+        
+        switchCount++;
+    }
+
+
+/*
+    td_msgs::String switchString;
+    std::stringstream stemp;
+  	// switching teleop pairs first:
+  	if (switchFlag==0)
+  	{
+  		stemp << "yes";
+    	switchString.data = stemp.str();
+  		switch_pub.publish(switchString);
+  		switchFlag = 1;
+  		ros::Duration(3.30).sleep();
+  		// switchCount++;
+  	}
+*/
+
     // creating object to broadcast transforms 
     static tf2_ros::TransformBroadcaster br;
 
     // for H_Base2_Base1 - from MATLAB script
     geometry_msgs::Pose temp;
-    temp.position.x = ;
-    temp.position.y = ;
-    temp.position.z = ;
-    temp.orientation.w = ;
-    temp.orientation.x = ;
-    temp.orientation.y = ;
-    temp.orientation.z = ;
+    temp.position.x = 0.0081;
+    temp.position.y = 0.2767;
+    temp.position.z = -0.0580;
+    temp.orientation.w = 0.5645;
+    temp.orientation.x = -0.0469;
+    temp.orientation.y = -0.0250;
+    temp.orientation.z = 0.8237;
 
     tf::Pose H_Base2_Base1;
     tf::poseMsgToTF(temp, H_Base2_Base1);
 
     // for H_Base3_Base1 - from MATLAB script
     geometry_msgs::Pose temp1;
-    temp1.position.x = ;
-    temp1.position.y = ;
-    temp1.position.z = ;
-    temp1.orientation.w = ;
-    temp1.orientation.x = ;
-    temp1.orientation.y = ;
-    temp1.orientation.z = ;
+    temp1.position.x = -0.1779;
+    temp1.position.y = 0.1433;
+    temp1.position.z = 0.2481;
+    temp1.orientation.w = 0.9702;
+    temp1.orientation.x = 0.0076;
+    temp1.orientation.y = -0.0296;
+    temp1.orientation.z = -0.2402;
 
     tf::Pose H_Base3_Base1;
     tf::poseMsgToTF(temp1, H_Base3_Base1);     
@@ -310,24 +357,26 @@ int main(int argc, char **argv)
     br.sendTransform(tf_H_Tool2);
     br.sendTransform(tf_H_Tool3);
 
-    // setting registration rotation of MTML-PSM2
-    geometry_msgs::Quaternion q2;
-    q2.w = 0;
-    q2.x = 1;
-    q2.y = 0;
-    q2.z = 0;
-    
-    psm2_rot_pub.publish(q);
+    // setting registration rotations
+    geometry_msgs::Quaternion q;
+    q.w = 0;
+    q.x = 1;
+    q.y = 0;
+    q.z = 0;
 
-    // setting registration rotation of MTMR-PSM3
-    geometry_msgs::Quaternion q3;
-    q3.w = 0;
-    q3.x = 1;
-    q3.y = 0;
-    q3.z = 0;
     
-    psm2_rot_pub.publish(q2);
-    psm3_rot_pub.publish(q3);
+    if(switchCount%2==1)
+    {
+    	MTML_PSM2_rot_pub.publish(q);
+    	MTMR_PSM3_rot_pub.publish(q);
+    }
+    else
+    {
+    	MTMR_PSM2_rot_pub.publish(q);
+    	MTML_PSM3_rot_pub.publish(q);
+    }
+    
+    
 
     if(regRotFlag==0)
     {
@@ -397,7 +446,7 @@ int main(int argc, char **argv)
     	MTMR_PSM2_pub.publish(MTMR_PSM2_State);
     	MTML_PSM3_pub.publish(MTML_PSM3_State);	
     }
-    
+    */
 
 	// Switching PSMs
 	// * COAG footpedal is used to make the switch    
@@ -427,7 +476,7 @@ int main(int argc, char **argv)
         ros::Duration(1).sleep(); // sleep for a second
 
         teleopPair.key = "MTML";
-        teleopPair.value = "PSM1";
+        teleopPair.value = "PSM3";
         teleop_switch_pub.publish(teleopPair);
         ROS_INFO("Switching has finished.");
         ros::Duration(1).sleep(); // sleep for a second  
@@ -441,7 +490,7 @@ int main(int argc, char **argv)
         ros::Duration(1).sleep(); // sleep for a second
 
         teleopPair.key = "MTMR";
-        teleopPair.value = "PSM1";
+        teleopPair.value = "PSM3";
         teleop_switch_pub.publish(teleopPair);
         // ROS_INFO("...");
         ros::Duration(1).sleep(); // sleep for a second
@@ -455,7 +504,7 @@ int main(int argc, char **argv)
       switchCount++;
       ros::Duration(0.25).sleep();
     }
-	*/
+	
 
     ros::spinOnce();
 
