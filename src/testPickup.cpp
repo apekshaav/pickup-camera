@@ -29,6 +29,7 @@
 geometry_msgs::Pose rec_msg_1, rec_msg_2, rec_msg_3;
 std::vector<int> isCam, isHead;
 int camPressed, headPressed, switchPressed;
+std::string MTMName;
 
 void callbackPSM1(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
@@ -73,8 +74,9 @@ void callbackHead(const sensor_msgs::Joy::ConstPtr& msg)
 
 void callbackSwitch(const std_msgs::String::ConstPtr& msg)
 {
+	MTMName = msg->data;
 	switchPressed = 1;
-	ROS_INFO("Switching enabled: %s", msg->data.c_str());
+	ROS_INFO("Switching enabled for MTM: %s", MTMName.c_str());
 }
 
 int main(int argc, char **argv)
@@ -112,7 +114,7 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(10);
 
   int switchFlag = 0;
-  int switchCount = 1; 
+  int switchCount = 0; 
   int baseFrameCount = 0;
   int regRotFlag = 0;
   while (ros::ok())
@@ -135,7 +137,7 @@ int main(int argc, char **argv)
     // H_Base3_Cam    : Final Transform - Base 3 to Pick-Up Camera                  //
     //////////////////////////////////////////////////////////////////////////////////
 
-/*
+    /*
     // setting intial teleop pairs to MTML-PSM3 and MTMR-PSM2
     diagnostic_msgs::KeyValue teleopPairInitial;
     if (switchFlag == 0)
@@ -147,20 +149,37 @@ int main(int argc, char **argv)
         teleopPairInitial.value = "";
         teleop_switch_pub.publish(teleopPairInitial);
         ROS_INFO("Switching has begun...");
-        ros::Duration(1).sleep(); // sleep for a second
+        ros::Duration(1.5).sleep(); // sleep for a second
 
         teleopPairInitial.key = "MTMR";
         teleopPairInitial.value = "PSM2";
         teleop_switch_pub.publish(teleopPairInitial);
         // ROS_INFO("...");
-        ros::Duration(1).sleep(); // sleep for a second
+        ros::Duration(1.5).sleep(); // sleep for a second
 
         teleopPairInitial.key = "MTML";
         teleopPairInitial.value = "PSM3";
         teleop_switch_pub.publish(teleopPairInitial);
         ROS_INFO("Switching has finished.");
-        ros::Duration(4).sleep(); // sleep for a second  
+        ros::Duration(1.5).sleep(); // sleep for a second  
+        
+        switchCount++;
     }
+    */
+
+/*
+    td_msgs::String switchString;
+    std::stringstream stemp;
+  	// switching teleop pairs first:
+  	if (switchFlag==0)
+  	{
+  		stemp << "yes";
+    	switchString.data = stemp.str();
+  		switch_pub.publish(switchString);
+  		switchFlag = 1;
+  		ros::Duration(3.30).sleep();
+  		// switchCount++;
+  	}
 */
 
     // creating object to broadcast transforms 
@@ -320,11 +339,11 @@ int main(int argc, char **argv)
 
     // setting base frames
     psm2_pub.publish(msg2);
-    psm3_pub.publish(msg3);
+    // psm3_pub.publish(msg3);
     // ROS_INFO("Position: [%f %f %f] Orientation: [%f %f %f %f]", msg.position.x, msg.position.y, msg.position.z, msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z);
 
     if (baseFrameCount%10==0)
-    	ROS_INFO("Updating base frames of PSM 2 and PSM3...");
+    	ROS_INFO("Updating base frame of PSM2...");
     baseFrameCount++;
 
     //clearing and resetting every 1000 times
@@ -339,70 +358,38 @@ int main(int argc, char **argv)
     br.sendTransform(tf_H_Tool3);
 
     // setting registration rotations
-    geometry_msgs::Quaternion q;
-    q.w = 0;
-    q.x = 1;
-    q.y = 0;
-    q.z = 0;
+    geometry_msgs::Quaternion q2;
+    q2.w = 0;
+    q2.x = 1;
+    q2.y = 0;
+    q2.z = 0;
+
+    geometry_msgs::Quaternion q3;
+    q3.w = 0;
+    q3.x = 1;
+    q3.y = 0;
+    q3.z = 0;
 
     
-    if(switchCount%2==1)
-    {
-    	MTML_PSM2_rot_pub.publish(q);
-    	MTMR_PSM3_rot_pub.publish(q);
-    }
-    else
-    {
-    	MTMR_PSM2_rot_pub.publish(q);
-    	MTML_PSM3_rot_pub.publish(q);
-    }
-
+    // if(switchCount%2==1)
+    // {
+    	// MTML_PSM2_rot_pub.publish(q);
+    	// MTMR_PSM3_rot_pub.publish(q);
+    // }
+    // else
+    // {
+    	MTMR_PSM2_rot_pub.publish(q2);
+    	// MTML_PSM3_rot_pub.publish(q3);
+    // }
+    
+    
+/*
     if(regRotFlag==0)
     {
-        ROS_INFO("Setting registration rotation for both teleop pairs");
-        regRotFlag = 1;
-    }
-
-/*
-    // setting intial teleop pairs to MTML-PSM3 and MTMR-PSM2
-    diagnostic_msgs::KeyValue teleopPairInitial;
-    if (switchFlag == 0)
-    {   
-        switchFlag = 1;
-        
-        ros::Duration(1.5).sleep();
-        teleopPairInitial.key = "MTML";
-        teleopPairInitial.value = "";
-        teleop_switch_pub.publish(teleopPairInitial);
-        ROS_INFO("Switching has begun...");
-        ros::Duration(1).sleep(); // sleep for a second
-
-        teleopPairInitial.key = "MTMR";
-        teleopPairInitial.value = "PSM2";
-        teleop_switch_pub.publish(teleopPairInitial);
-        // ROS_INFO("...");
-        ros::Duration(1).sleep(); // sleep for a second
-
-        teleopPairInitial.key = "MTML";
-        teleopPairInitial.value = "PSM3";
-        teleop_switch_pub.publish(teleopPairInitial);
-        ROS_INFO("Switching has finished.");
-        ros::Duration(1).sleep(); // sleep for a second  
+    	ROS_INFO("Setting registration rotation");
+    	regRotFlag = 1;
     }
 */
-    std_msgs::String switchString;
-    std::stringstream stemp;
-    // switching teleop pairs first:
-    if (switchFlag==0)
-    {
-        stemp << "yes";
-        switchString.data = stemp.str();
-        switch_pub.publish(switchString);
-        switchFlag = 1;
-        ros::Duration(3.30).sleep();
-        // switchCount++;
-    }
-
 
     // TELEOPERATION LOGIC ------------
     // During teleoperation:
@@ -474,7 +461,7 @@ int main(int argc, char **argv)
    	// * For all odd counts, the original teleop pairs are used.
    	// * For all even counts, the reverse teleop pairs are used.
     
-    
+    /*
     diagnostic_msgs::KeyValue teleopPair;
     // switching teleop pairs when message is published to topic /switch
     if (switchPressed == 1)
@@ -523,7 +510,7 @@ int main(int argc, char **argv)
       switchCount++;
       ros::Duration(0.25).sleep();
     }
-	
+	*/
 
     ros::spinOnce();
 

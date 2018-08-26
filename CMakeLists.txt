@@ -203,13 +203,16 @@ include_directories(
 # catkin_add_nosetests(test)
 
 add_executable(setPickup src/setPickup.cpp)
+add_executable(testPickup src/testPickup.cpp)
 add_executable(vis_frames src/vis_frames.cpp)
 add_executable(setECM src/setECM.cpp)
 
 target_link_libraries(setPickup ${catkin_LIBRARIES})
+target_link_libraries(testPickup ${catkin_LIBRARIES})
 target_link_libraries(vis_frames ${catkin_LIBRARIES})
 target_link_libraries(setECM ${catkin_LIBRARIES})
 
 add_dependencies(setPickup pickup_camera_generate_messages_cpp)
+add_dependencies(testPickup pickup_camera_generate_messages_cpp)
 add_dependencies(vis_frames pickup_camera_generate_messages_cpp)
 add_dependencies(setECM pickup_camera_generate_messages_cpp)

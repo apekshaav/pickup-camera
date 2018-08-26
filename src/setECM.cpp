@@ -17,7 +17,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 
 std::vector<int> isHead;
-int headPressed;
+int headPressed, switchPressed;
 
 void callbackHead(const sensor_msgs::Joy::ConstPtr& msg)
 {
@@ -25,6 +25,12 @@ void callbackHead(const sensor_msgs::Joy::ConstPtr& msg)
   headPressed = isHead[0];
 
   ROS_INFO("Head pressed: %d", headPressed);
+}
+
+void callbackSwitch(const std_msgs::String::ConstPtr& msg)
+{
+  switchPressed = 1;
+  ROS_INFO("Switching enabled: %s", msg->data.c_str());
 }
 
 int main(int argc, char **argv)
@@ -35,6 +41,7 @@ int main(int argc, char **argv)
 
   // subscribers
   ros::Subscriber head_sub = n.subscribe("/dvrk/footpedals/operatorpresent", 1000, callbackHead);
+  ros::Subscriber switch_sub = n.subscribe("/switch", 1000, callbackSwitch);
   
   // publishers
   ros::Publisher psm2_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM2/set_base_frame", 1000);
@@ -46,20 +53,21 @@ int main(int argc, char **argv)
   ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM2/set_desired_state", 1000);
   ros::Publisher MTMR_PSM1_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM1/set_desired_state", 1000);
 
-  // ros::Publisher switch_pub = n.advertise<std_msgs::String>("/switch", 1000);
+  ros::Publisher switch_pub = n.advertise<std_msgs::String>("/switch", 1000);
   ros::Publisher teleop_switch_pub = n.advertise<diagnostic_msgs::KeyValue>("/dvrk/console/teleop/select_teleop_psm", 1000);
   
   
   ros::Rate loop_rate(10);
   
   int switchFlag = 0;
+  int switchCount = 0;
   int baseFrameCount = 0;
   int regRotFlag = 0;
   while (ros::ok())
   {
     
 
-  	//setting initial teleop pairs to MTML-PSM2 and MTMR-PSM3
+  /*	//setting initial teleop pairs to MTML-PSM2 and MTMR-PSM3
 	diagnostic_msgs::KeyValue teleopPair;
     if (switchFlag == 0)
     {	
@@ -85,7 +93,7 @@ int main(int argc, char **argv)
 
       switchFlag = 1;
     }
-    
+  */  
 
     // transform from PSM2 Base Frame to ECM tip frame
     geometry_msgs::Pose msg2;
@@ -143,6 +151,19 @@ int main(int argc, char **argv)
       regRotFlag = 1;
     }
 
+    std_msgs::String switchString;
+    std::stringstream stemp;
+    // switching teleop pairs first:
+    if (switchFlag==0)
+    {
+        stemp << "yes";
+        switchString.data = stemp.str();
+        switch_pub.publish(switchString);
+        switchFlag = 1;
+        ros::Duration(3.30).sleep();
+        // switchCount++;
+    }
+
     // TELEOPERATION LOGIC ------
     // During teleoperation:
     // * Head sensor is required to enable the teleoperation of MTMR-PSM1 (camera arm)
@@ -175,6 +196,56 @@ int main(int argc, char **argv)
     MTMR_PSM1_pub.publish(MTMR_PSM1_State);
     MTML_PSM2_pub.publish(MTML_PSM2_State); 
     */
+
+
+    diagnostic_msgs::KeyValue teleopPair;
+    // switching teleop pairs when message is published to topic /switch
+    if (switchPressed == 1)
+    { 
+      switchPressed = 0;
+      if (switchCount%2==1)
+      {
+        teleopPair.key = "MTML";
+        teleopPair.value = "";
+        teleop_switch_pub.publish(teleopPair);
+        ROS_INFO("Switching has begun...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPair.key = "MTMR";
+        teleopPair.value = "PSM2";
+        teleop_switch_pub.publish(teleopPair);
+        // ROS_INFO("...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPair.key = "MTML";
+        teleopPair.value = "PSM3";
+        teleop_switch_pub.publish(teleopPair);
+        ROS_INFO("Switching has finished.");
+        ros::Duration(1).sleep(); // sleep for a second  
+      }
+      else
+      {
+        teleopPair.key = "MTML";
+        teleopPair.value = "";
+        teleop_switch_pub.publish(teleopPair);
+        ROS_INFO("Switching has begun...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPair.key = "MTMR";
+        teleopPair.value = "PSM3";
+        teleop_switch_pub.publish(teleopPair);
+        // ROS_INFO("...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPair.key = "MTML";
+        teleopPair.value = "PSM2";
+        teleop_switch_pub.publish(teleopPair);
+        ROS_INFO("Switching has finished.");
+        ros::Duration(1).sleep(); // sleep for a second  
+      }
+      switchCount++;
+      ros::Duration(0.25).sleep();
+    }
     
     ros::spinOnce();
 
