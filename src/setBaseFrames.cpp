@@ -1,0 +1,602 @@
+/**
+ * This script is used to send the transform (position, quaternion) to set the base transform 
+ * of the two da Vinci PSMs (PSM2 and PSM3) with respect to either the endoscope (ECM) or a 
+ * pick-up camera held by another PSM (PSM1).
+ * 
+ * PSM2 (Green Arm) will hold a tool.
+ * PSM3 (Red Arm) will hold another tool.
+ * PSM1 (Yellow Arm) will hold the pick-up camera.
+ *
+ */
+
+#include <vector>
+#include <sstream>
+
+// ROS
+#include <ros/ros.h>
+#include <std_msgs/String.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <diagnostic_msgs/KeyValue.h>
+#include <sensor_msgs/Joy.h>
+
+// TF
+#include <tf/tf.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_ros/transform_broadcaster.h>
+
+
+geometry_msgs::Pose rec_msg_1, rec_msg_2, rec_msg_3;
+std::vector<int> isCam, isHead;
+int camPressed, headPressed, switchPressed;
+
+void callbackPSM1(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+  
+  // storing only pose not timestamp details
+  rec_msg_1 = msg->pose;
+
+}
+
+void callbackPSM2(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+  
+  // storing only pose not timestamp details
+  rec_msg_2 = msg->pose;
+
+}
+
+void callbackPSM3(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+  
+  // storing only pose not timestamp details
+  rec_msg_3 = msg->pose;
+
+}
+
+void callbackCam(const sensor_msgs::Joy::ConstPtr& msg)
+{
+	isCam = msg->buttons;
+	camPressed = isCam[0];
+
+	ROS_INFO("Cam pressed: %d", camPressed);
+}
+
+
+void callbackHead(const sensor_msgs::Joy::ConstPtr& msg)
+{
+	isHead = msg->buttons;
+	headPressed = isHead[0];
+
+	ROS_INFO("Head pressed: %d", headPressed);
+}
+
+void callbackSwitch(const std_msgs::String::ConstPtr& msg)
+{
+	switchPressed = 1;
+	ROS_INFO("Switching enabled: %s", msg->data.c_str());
+}
+
+int main(int argc, char **argv)
+{
+  
+  ros::init(argc, argv, "setPickup");
+  ros::NodeHandle n;
+
+  // subscribers
+  ros::Subscriber sub1 = n.subscribe("/dvrk/PSM1/position_cartesian_local_current", 1000, callbackPSM1);
+  ros::Subscriber sub2 = n.subscribe("/dvrk/PSM2/position_cartesian_current", 1000, callbackPSM2); // we want position data, including base frame
+  ros::Subscriber sub3 = n.subscribe("/dvrk/PSM3/position_cartesian_current", 1000, callbackPSM3); // we want position data, including base frame
+
+  ros::Subscriber cam_sub = n.subscribe("/dvrk/footpedals/camera", 1000, callbackCam);
+  ros::Subscriber head_sub = n.subscribe("/dvrk/footpedals/operatorpresent", 1000, callbackHead);
+  ros::Subscriber switch_sub = n.subscribe("/switch", 1000, callbackSwitch);
+  
+  // publishers
+  ros::Publisher psm2_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM2/set_base_frame", 1000);
+  ros::Publisher psm3_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM3/set_base_frame", 1000);
+  
+  ros::Publisher MTML_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
+  ros::Publisher MTMR_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM3/set_registration_rotation", 1000);
+
+  ros::Publisher MTMR_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM2/set_registration_rotation", 1000);
+  ros::Publisher MTML_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM3/set_registration_rotation", 1000);
+  
+  ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM2/set_desired_state", 1000);
+  ros::Publisher MTMR_PSM3_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM3/set_desired_state", 1000);
+  ros::Publisher MTML_PSM3_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM3/set_desired_state", 1000);
+  ros::Publisher MTMR_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM2/set_desired_state", 1000);
+  ros::Publisher switch_pub = n.advertise<std_msgs::String>("/switch", 1000);
+  ros::Publisher teleop_switch_pub = n.advertise<diagnostic_msgs::KeyValue>("/dvrk/console/teleop/select_teleop_psm", 1000);
+
+  ros::Rate loop_rate(10);
+
+  int controlFlag = 0;
+  int camSwitch = 0;
+  int switchFlag = 0;
+  int switchCount = 1; 
+  int baseFrameCount = 0;
+  int regRotFlag = 0;
+  while (ros::ok())
+  {
+    
+    //////////////////////////////////////////////////////////////////////////////////
+    // Transforms                                                                   //
+    // ----------                                                                   //
+    // H_Base1_W      : Base 1 to World                                             //
+    // H_Base2_W      : Base 2 to World                                             //
+    // H_Base3_W      : Base 3 to World                                             //
+    // H_Base2_Base1  : Base 2 to Base 1                                            //
+    // H_Base3_Base1  : Base 3 to Base 1                                            //
+    // H_Tool1_Base1  : Tooltip 1 to Base 1                                         //
+    // H_Tool2_Base2  : Tooltip 2 to Base 2                                         //
+    // H_Base1_Tool1  : Base 1 to Tooltip 1                                         //
+    // H_Tool1_Cam    : Tooltip 1 to Pick-Up Camera                                 //
+    // H_Cam_Tool1    : Pick-Up Camera to Tooltip 1                                 //
+    // H_Base2_Cam    : Final Transform - Base 2 to Pick-Up Camera                  //
+    // H_Base3_Cam    : Final Transform - Base 3 to Pick-Up Camera                  //
+    //////////////////////////////////////////////////////////////////////////////////
+
+
+
+    // CAMERA footpedal provides the switch between setPickup and setECM
+    // 
+    // On startup, camSwitch = 0. We should start up with the setECM code. Subsequent switching will increase camSwitch and
+    // switch to setPickup code.
+    //
+    // So at all odd counts, setECM - controlFlag = 0
+    // At all even counts, setPickup - controlFlag = 1
+
+    // checking if CAMERA footpedal has been pressed
+    if(camPressed == 1)
+    {
+        camSwitch++;
+        if(camSwitch%2==0)
+            controlFlag = 0;
+        else
+            controlFlag = 1;
+    }
+
+
+    if(controlFlag == 0)
+    {
+        // begin setECM -----------------------------------------------------------------------------------------------
+
+        // transform from PSM2 Base Frame to ECM tip frame
+        geometry_msgs::Pose msg2;
+        msg2.position.x = 0.2282;
+        msg2.position.y = 0.2876;
+        msg2.position.z = 1.4630;
+        msg2.orientation.w = 0.6442;
+        msg2.orientation.x = 0.5436;
+        msg2.orientation.y = -0.3745;
+        msg2.orientation.z = 0.3862;
+
+
+        // transform from PSM3 Base Frame to ECM tip frame
+        geometry_msgs::Pose msg3;
+        msg3.position.x = 0.0037;
+        msg3.position.y = -0.0169;
+        msg3.position.z = 1.5176;
+        msg3.orientation.w = 0.5814;
+        msg3.orientation.x = 0.5487;
+        msg3.orientation.y = 0.3935;
+        msg3.orientation.z = -0.4539;
+
+        if (baseFrameCount%10==0)
+          ROS_INFO("Updating base frame of PSM 2 and PSM3...");
+        baseFrameCount++;
+
+        //clearing and resetting every 1000 times
+        if (baseFrameCount==1000)
+            baseFrameCount = 0;
+
+        psm2_pub.publish(msg2);
+        psm3_pub.publish(msg3);
+
+        // setting registration rotation of MTML-PSM2
+        geometry_msgs::Quaternion q2;
+        q2.w = 0;
+        q2.x = 0;
+        q2.y = -0.7071; 
+        q2.z = 0.7071;
+
+        MTML_PSM2_rot_pub.publish(q2);
+
+        // setting registration rotation of MTMR-PSM3
+        geometry_msgs::Quaternion q3;
+        q3.w = 0;
+        q3.x = 0;
+        q3.y = -0.7071; 
+        q3.z = 0.7071;
+
+        MTMR_PSM3_rot_pub.publish(q3);
+
+        if(regRotFlag==0)
+        {
+            ROS_INFO("Setting registration rotation for MTML-PSM2 and MTMR-PSM3");
+            regRotFlag = 1;
+        }
+
+        std_msgs::String switchString;
+        std::stringstream stemp;
+        // switching teleop pairs first:
+        if (switchFlag==0)
+        {
+            stemp << "yes";
+            switchString.data = stemp.str();
+            switch_pub.publish(switchString);
+            switchFlag = 1;
+            ros::Duration(3.30).sleep();
+            // switchCount++;
+        }
+
+
+        diagnostic_msgs::KeyValue teleopPair;
+        // switching teleop pairs when message is published to topic /switch
+        if (switchPressed == 1)
+        { 
+            switchPressed = 0;
+            if (switchCount%2==1)
+            {
+                teleopPair.key = "MTML";
+                teleopPair.value = "";
+                teleop_switch_pub.publish(teleopPair);
+                ROS_INFO("Switching has begun...");
+                ros::Duration(1).sleep(); // sleep for a second
+
+                teleopPair.key = "MTMR";
+                teleopPair.value = "PSM2";
+                teleop_switch_pub.publish(teleopPair);
+                // ROS_INFO("...");
+                ros::Duration(1).sleep(); // sleep for a second
+
+                teleopPair.key = "MTML";
+                teleopPair.value = "PSM3";
+                teleop_switch_pub.publish(teleopPair);
+                ROS_INFO("Switching has finished.");
+                ros::Duration(1).sleep(); // sleep for a second  
+            }   
+            else
+            {
+                teleopPair.key = "MTML";
+                teleopPair.value = "";
+                teleop_switch_pub.publish(teleopPair);
+                ROS_INFO("Switching has begun...");
+                ros::Duration(1).sleep(); // sleep for a second
+
+                teleopPair.key = "MTMR";
+                teleopPair.value = "PSM3";
+                teleop_switch_pub.publish(teleopPair);
+                // ROS_INFO("...");
+                ros::Duration(1).sleep(); // sleep for a second
+
+                teleopPair.key = "MTML";
+                teleopPair.value = "PSM2";
+                teleop_switch_pub.publish(teleopPair);
+                ROS_INFO("Switching has finished.");
+                ros::Duration(1).sleep(); // sleep for a second  
+            }
+            switchCount++;
+            ros::Duration(0.25).sleep();
+        }
+
+        // end setECM -------------------------------------------------------------------------------------------------
+    }
+    else
+    {
+
+        // begin setPickup ------------------------------------------------------------------------------------------------
+
+        // creating object to broadcast transforms 
+        static tf2_ros::TransformBroadcaster br;
+
+        // for H_Base2_Base1 - from MATLAB script
+        geometry_msgs::Pose temp;
+        temp.position.x = 0.0081;
+        temp.position.y = 0.2767;
+        temp.position.z = -0.0580;
+        temp.orientation.w = 0.5645;
+        temp.orientation.x = -0.0469;
+        temp.orientation.y = -0.0250;
+        temp.orientation.z = 0.8237;
+
+        tf::Pose H_Base2_Base1;
+        tf::poseMsgToTF(temp, H_Base2_Base1);
+
+        // for H_Base3_Base1 - from MATLAB script
+        geometry_msgs::Pose temp1;
+        temp1.position.x = -0.1779;
+        temp1.position.y = 0.1433;
+        temp1.position.z = 0.2481;
+        temp1.orientation.w = 0.9702;
+        temp1.orientation.x = 0.0076;
+        temp1.orientation.y = -0.0296;
+        temp1.orientation.z = -0.2402;
+
+        tf::Pose H_Base3_Base1;
+        tf::poseMsgToTF(temp1, H_Base3_Base1);     
+    
+
+        // from solidworks model:
+        // for H_Tool1_Cam
+        geometry_msgs::Pose temp2;
+        temp2.position.x = 0.035; //0.02645;
+        temp2.position.y = 0.0;
+        temp2.position.z = 0.0;
+        temp2.orientation.w = 0.9659;
+        temp2.orientation.x = -0.2588;
+        temp2.orientation.y = 0.0;
+        temp2.orientation.z = 0.0;
+    
+    tf::Pose H_Tool1_Cam;
+    tf::poseMsgToTF(temp2, H_Tool1_Cam);
+
+    // for displaying in rviz, take the inverse
+    tf::Transform H_Cam_Tool1 = H_Tool1_Cam.inverse();
+    geometry_msgs::TransformStamped tf_H_Cam_Tool1;
+  
+    tf_H_Cam_Tool1.header.stamp = ros::Time::now();
+    tf_H_Cam_Tool1.header.frame_id = "tool1";
+    tf_H_Cam_Tool1.child_frame_id = "camera";
+    tf_H_Cam_Tool1.transform.translation.x = H_Cam_Tool1.getOrigin().getX();
+    tf_H_Cam_Tool1.transform.translation.y = H_Cam_Tool1.getOrigin().getY();
+    tf_H_Cam_Tool1.transform.translation.z = H_Cam_Tool1.getOrigin().getZ();
+    tf_H_Cam_Tool1.transform.rotation.w = H_Cam_Tool1.getRotation().w();
+    tf_H_Cam_Tool1.transform.rotation.x = H_Cam_Tool1.getRotation().x();
+    tf_H_Cam_Tool1.transform.rotation.y = H_Cam_Tool1.getRotation().y();
+    tf_H_Cam_Tool1.transform.rotation.z = H_Cam_Tool1.getRotation().z();
+
+    // using data retrieved from subscriber
+    tf::Pose H_Tool1_Base1;
+    tf::poseMsgToTF(rec_msg_1, H_Tool1_Base1);
+
+    // // for non-moving da Vinci arm holding camera
+    // geometry_msgs::Pose temp3;
+    // temp3.position.x = ;
+    // temp3.position.y = ;
+    // temp3.position.z = ;
+    // temp3.orientation.w = ;
+    // temp3.orientation.x = ;
+    // temp3.orientation.y = ;
+    // temp3.orientation.z = ;
+    // tf::Pose H_Tool1_Base1;
+    // tf::poseMsgToTF(temp3, H_Tool1_Base1);
+  
+    tf::Transform H_Base1_Tool1 = H_Tool1_Base1.inverse();
+
+
+    // Tooltip 2 position (including base frame, ie., wrt camera. That's why subscribed topic is NOT local.)
+    tf::Pose H_Tool2;
+    tf::poseMsgToTF(rec_msg_2, H_Tool2);
+    geometry_msgs::TransformStamped tf_H_Tool2;
+  
+    tf_H_Tool2.header.stamp = ros::Time::now();
+    tf_H_Tool2.header.frame_id = "new_cam";
+    tf_H_Tool2.child_frame_id = "new_tool2";
+    tf_H_Tool2.transform.translation.x = H_Tool2.getOrigin().getX();
+    tf_H_Tool2.transform.translation.y = H_Tool2.getOrigin().getY();
+    tf_H_Tool2.transform.translation.z = H_Tool2.getOrigin().getZ();
+    tf_H_Tool2.transform.rotation.w = H_Tool2.getRotation().w();
+    tf_H_Tool2.transform.rotation.x = H_Tool2.getRotation().x();
+    tf_H_Tool2.transform.rotation.y = H_Tool2.getRotation().y();
+    tf_H_Tool2.transform.rotation.z = H_Tool2.getRotation().z();
+
+
+    // Tooltip 3 position (including base frame, ie., wrt camera. That's why subscribed topic is NOT local.)
+    tf::Pose H_Tool3;
+    tf::poseMsgToTF(rec_msg_3, H_Tool3);
+    geometry_msgs::TransformStamped tf_H_Tool3;
+  
+    tf_H_Tool3.header.stamp = ros::Time::now();
+    tf_H_Tool3.header.frame_id = "new_cam";
+    tf_H_Tool3.child_frame_id = "new_tool3";
+    tf_H_Tool3.transform.translation.x = H_Tool3.getOrigin().getX();
+    tf_H_Tool3.transform.translation.y = H_Tool3.getOrigin().getY();
+    tf_H_Tool3.transform.translation.z = H_Tool3.getOrigin().getZ();
+    tf_H_Tool3.transform.rotation.w = H_Tool3.getRotation().w();
+    tf_H_Tool3.transform.rotation.x = H_Tool3.getRotation().x();
+    tf_H_Tool3.transform.rotation.y = H_Tool3.getRotation().y();
+    tf_H_Tool3.transform.rotation.z = H_Tool3.getRotation().z();
+
+
+    // transformation chains
+    tf::Pose H_Base2_Cam = H_Tool1_Cam * H_Base1_Tool1 * H_Base2_Base1;
+    tf::Pose H_Base3_Cam = H_Tool1_Cam * H_Base1_Tool1 * H_Base3_Base1;
+
+    // for PSM2
+    geometry_msgs::Pose msg2;
+    tf::poseTFToMsg(H_Base2_Cam, msg2);
+
+    // for PSM3
+    geometry_msgs::Pose msg3;
+    tf::poseTFToMsg(H_Base3_Cam, msg3);
+
+    // tf
+    tf::Transform H_Cam_Base2 = H_Base2_Cam.inverse(); 
+    geometry_msgs::TransformStamped tf_H_Cam_Base2;
+  
+    tf_H_Cam_Base2.header.stamp = ros::Time::now();
+    tf_H_Cam_Base2.header.frame_id = "base2";
+    tf_H_Cam_Base2.child_frame_id = "new_cam_2";
+    tf_H_Cam_Base2.transform.translation.x = H_Cam_Base2.getOrigin().getX();
+    tf_H_Cam_Base2.transform.translation.y = H_Cam_Base2.getOrigin().getY();
+    tf_H_Cam_Base2.transform.translation.z = H_Cam_Base2.getOrigin().getZ();
+    tf_H_Cam_Base2.transform.rotation.w = H_Cam_Base2.getRotation().w();
+    tf_H_Cam_Base2.transform.rotation.x = H_Cam_Base2.getRotation().x();
+    tf_H_Cam_Base2.transform.rotation.y = H_Cam_Base2.getRotation().y();
+    tf_H_Cam_Base2.transform.rotation.z = H_Cam_Base2.getRotation().z();
+
+    // tf
+    tf::Transform H_Cam_Base3 = H_Base3_Cam.inverse(); 
+    geometry_msgs::TransformStamped tf_H_Cam_Base3;
+  
+    tf_H_Cam_Base3.header.stamp = ros::Time::now();
+    tf_H_Cam_Base3.header.frame_id = "base3";
+    tf_H_Cam_Base3.child_frame_id = "new_cam_3";
+    tf_H_Cam_Base3.transform.translation.x = H_Cam_Base3.getOrigin().getX();
+    tf_H_Cam_Base3.transform.translation.y = H_Cam_Base3.getOrigin().getY();
+    tf_H_Cam_Base3.transform.translation.z = H_Cam_Base3.getOrigin().getZ();
+    tf_H_Cam_Base3.transform.rotation.w = H_Cam_Base3.getRotation().w();
+    tf_H_Cam_Base3.transform.rotation.x = H_Cam_Base3.getRotation().x();
+    tf_H_Cam_Base3.transform.rotation.y = H_Cam_Base3.getRotation().y();
+    tf_H_Cam_Base3.transform.rotation.z = H_Cam_Base3.getRotation().z();
+
+
+    // setting base frames
+    psm2_pub.publish(msg2);
+    psm3_pub.publish(msg3);
+    // ROS_INFO("Position: [%f %f %f] Orientation: [%f %f %f %f]", msg.position.x, msg.position.y, msg.position.z, msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z);
+
+    if (baseFrameCount%10==0)
+    	ROS_INFO("Updating base frames of PSM 2 and PSM3...");
+    baseFrameCount++;
+
+    //clearing and resetting every 1000 times
+    if (baseFrameCount==1000)
+    	baseFrameCount = 0;
+
+    // sending transforms to visualize on rviz
+    br.sendTransform(tf_H_Cam_Tool1);
+    br.sendTransform(tf_H_Cam_Base2);
+    br.sendTransform(tf_H_Cam_Base3);
+    br.sendTransform(tf_H_Tool2);
+    br.sendTransform(tf_H_Tool3);
+
+    // setting registration rotations
+    geometry_msgs::Quaternion q;
+    q.w = 0;
+    q.x = 1;
+    q.y = 0;
+    q.z = 0;
+
+    
+    if(switchCount%2==1)
+    {
+    	MTML_PSM2_rot_pub.publish(q);
+    	MTMR_PSM3_rot_pub.publish(q);
+    }
+    else
+    {
+    	MTMR_PSM2_rot_pub.publish(q);
+    	MTML_PSM3_rot_pub.publish(q);
+    }
+
+    if(regRotFlag==0)
+    {
+        ROS_INFO("Setting registration rotation for both teleop pairs");
+        regRotFlag = 1;
+    }
+
+/*
+    // setting intial teleop pairs to MTML-PSM3 and MTMR-PSM2
+    diagnostic_msgs::KeyValue teleopPairInitial;
+    if (switchFlag == 0)
+    {   
+        switchFlag = 1;
+        
+        ros::Duration(1.5).sleep();
+        teleopPairInitial.key = "MTML";
+        teleopPairInitial.value = "";
+        teleop_switch_pub.publish(teleopPairInitial);
+        ROS_INFO("Switching has begun...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPairInitial.key = "MTMR";
+        teleopPairInitial.value = "PSM2";
+        teleop_switch_pub.publish(teleopPairInitial);
+        // ROS_INFO("...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPairInitial.key = "MTML";
+        teleopPairInitial.value = "PSM3";
+        teleop_switch_pub.publish(teleopPairInitial);
+        ROS_INFO("Switching has finished.");
+        ros::Duration(1).sleep(); // sleep for a second  
+    }
+*/
+    std_msgs::String switchString;
+    std::stringstream stemp;
+    // switching teleop pairs first:
+    if (switchFlag==0)
+    {
+        stemp << "yes";
+        switchString.data = stemp.str();
+        switch_pub.publish(switchString);
+        switchFlag = 1;
+        ros::Duration(3.30).sleep();
+        // switchCount++;
+    }
+
+	// Switching PSMs
+	// * COAG footpedal is used to make the switch    
+   	// * The messages received are the form sensor_msgs/Joy. The 'buttons' value indicates footpedal pressed (1) or not (0).
+   	// * Each time COAG is pressed, the teleop pairs must be switched. Use a count variable. 
+   	// * For all odd counts, the original teleop pairs are used.
+   	// * For all even counts, the reverse teleop pairs are used.
+    
+    
+    diagnostic_msgs::KeyValue teleopPair;
+    // switching teleop pairs when message is published to topic /switch
+    if (switchPressed == 1)
+    {	
+    	switchPressed = 0;
+    	if (switchCount%2==1)
+      {
+        teleopPair.key = "MTML";
+        teleopPair.value = "";
+        teleop_switch_pub.publish(teleopPair);
+        ROS_INFO("Switching has begun...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPair.key = "MTMR";
+        teleopPair.value = "PSM2";
+        teleop_switch_pub.publish(teleopPair);
+        // ROS_INFO("...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPair.key = "MTML";
+        teleopPair.value = "PSM3";
+        teleop_switch_pub.publish(teleopPair);
+        ROS_INFO("Switching has finished.");
+        ros::Duration(1).sleep(); // sleep for a second  
+      }
+      else
+      {
+        teleopPair.key = "MTML";
+        teleopPair.value = "";
+        teleop_switch_pub.publish(teleopPair);
+        ROS_INFO("Switching has begun...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPair.key = "MTMR";
+        teleopPair.value = "PSM3";
+        teleop_switch_pub.publish(teleopPair);
+        // ROS_INFO("...");
+        ros::Duration(1).sleep(); // sleep for a second
+
+        teleopPair.key = "MTML";
+        teleopPair.value = "PSM2";
+        teleop_switch_pub.publish(teleopPair);
+        ROS_INFO("Switching has finished.");
+        ros::Duration(1).sleep(); // sleep for a second  
+      }
+      switchCount++;
+      ros::Duration(0.25).sleep();
+    }
+
+    // end setPickup ------------------------------------------------------------------------------------------------------------------
+
+    }
+	
+
+    ros::spinOnce();
+
+    loop_rate.sleep();
+
+  }
+
+
+  return 0;
+}
