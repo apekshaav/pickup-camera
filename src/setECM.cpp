@@ -47,8 +47,10 @@ int main(int argc, char **argv)
   ros::Publisher psm2_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM2/set_base_frame", 1000);
   ros::Publisher psm3_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM3/set_base_frame", 1000);
   
-  ros::Publisher psm2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
-  ros::Publisher psm3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM3/set_registration_rotation", 1000);
+  ros::Publisher MTML_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
+  ros::Publisher MTMR_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM3/set_registration_rotation", 1000);
+  ros::Publisher MTMR_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM2/set_registration_rotation", 1000);
+  ros::Publisher MTML_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM3/set_registration_rotation", 1000);
 
   ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM2/set_desired_state", 1000);
   ros::Publisher MTMR_PSM1_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM1/set_desired_state", 1000);
@@ -134,16 +136,26 @@ int main(int argc, char **argv)
     q2.y = -0.7071; 
     q2.z = 0.7071;
 
-    psm2_rot_pub.publish(q2);
-
+    
     // setting registration rotation of MTMR-PSM3
     geometry_msgs::Quaternion q3;
     q3.w = 0;
     q3.x = 0;
-    q3.y = -0.7071; 
-    q3.z = 0.7071;
+    q3.y = -0.707; 
+    q3.z = 0.707;
 
-    psm3_rot_pub.publish(q3);
+    if (switchCount%2==1)
+    {
+      MTMR_PSM2_rot_pub.publish(q3);
+      MTML_PSM3_rot_pub.publish(q3);
+    }
+    else
+    {
+      MTML_PSM2_rot_pub.publish(q2);
+      MTMR_PSM3_rot_pub.publish(q2);
+    }
+
+    
 
     if(regRotFlag==0)
     {
