@@ -7,6 +7,7 @@
 // ROS
 #include <ros/ros.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Float32.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -36,6 +37,7 @@ private:
 	// Console controls
 	std::vector<int> isCam;
 	std::vector<int> isHead;
+	std_msgs::Float32 scale;
 	int camPressed;
 	int headPressed;
 	int switchPressed;
@@ -46,6 +48,7 @@ private:
 	int baseFrameCount;
 	int regRotFlag;
 	int rate;
+	bool scaleSet;
 
 	// ROS node handle
 	ros::NodeHandle n;
@@ -53,6 +56,7 @@ private:
 	// ROS Subscribers
 	ros::Subscriber sub1, sub2, sub3;
 	ros::Subscriber cam_sub, head_sub, switch_sub;
+	ros::Subscriber scale_sub;
 
 	// ROS Publishers
 	ros::Publisher psm2_pub, psm3_pub;
@@ -84,12 +88,14 @@ private:
 	void callbackHead(const sensor_msgs::Joy::ConstPtr& msg);
 	void callbackSwitch(const std_msgs::String::ConstPtr& msg);
 
+	void callbackScale(const std_msgs::Float32::ConstPtr& msg);
+
 	// Member functions
 	void init();
 	void setup();
 	void broadcast();
 	void switchTeleopPair();
-	void setScale();
+	void setTeleopScale();
 
 
 };

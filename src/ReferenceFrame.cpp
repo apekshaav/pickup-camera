@@ -23,6 +23,7 @@ ReferenceFrame::ReferenceFrame()
   	switchCount = 1; 
   	baseFrameCount = 0;
   	regRotFlag = 0;
+    scaleSet = false;
 
   	init();
 }
@@ -75,6 +76,12 @@ void ReferenceFrame::callbackSwitch(const std_msgs::String::ConstPtr& msg)
 	ROS_INFO("Switching enabled: %s", msg->data.c_str());
 }
 
+void ReferenceFrame::callbackScale(const std_msgs::Float32::ConstPtr& msg)
+{
+    scale.data = msg->data;
+    scaleSet = true;
+}
+
 void ReferenceFrame::init()
 {
 	// Starting ROS subscribers
@@ -83,7 +90,8 @@ void ReferenceFrame::init()
   	//cam_sub = n.subscribe("/dvrk/footpedals/camera", 1000, &ReferenceFrame::callbackCam, this);
   	//head_sub = n.subscribe("/dvrk/footpedals/operatorpresent", 1000, &ReferenceFrame::callbackHead, this);
   
-  	switch_sub = n.subscribe("/pickup/switch", 1000, &ReferenceFrame::callbackSwitch, this);
+  	switch_sub = n.subscribe("/pickup/switch_teleop_pair", 1000, &ReferenceFrame::callbackSwitch, this);
+    scale_sub = n.subscribe("/pickup/set_teleop_scale", 1000, &ReferenceFrame::callbackScale, this);
 
   	// Starting ROS Publishers
   	psm2_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM2/set_base_frame", 1000);
@@ -99,8 +107,13 @@ void ReferenceFrame::init()
   	//MTMR_PSM3_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM3/set_desired_state", 1000);
   	//MTML_PSM3_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM3/set_desired_state", 1000);
   	//MTMR_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM2/set_desired_state", 1000);
+
+    MTML_PSM2_pub = n.advertise<std_msgs::Float32>("/dvrk/MTML_PSM2/set_scale", 1000);
+    MTMR_PSM3_pub = n.advertise<std_msgs::Float32>("/dvrk/MTMR_PSM3/set_scale", 1000);
+    MTMR_PSM2_pub = n.advertise<std_msgs::Float32>("/dvrk/MTMR_PSM2/set_scale", 1000);
+    MTML_PSM3_pub = n.advertise<std_msgs::Float32>("/dvrk/MTML_PSM3/set_scale", 1000);
   	
-  	switch_pub = n.advertise<std_msgs::String>("/pickup/switch", 1000);
+  	switch_pub = n.advertise<std_msgs::String>("/pickup/switch_teleop_pair", 1000);
   	teleop_switch_pub = n.advertise<diagnostic_msgs::KeyValue>("/dvrk/console/teleop/select_teleop_psm", 1000);
 
 	// for TF broadcasting
@@ -233,9 +246,14 @@ void ReferenceFrame::switchTeleopPair()
 
 }
 	
-void ReferenceFrame::setScale()
+void ReferenceFrame::setTeleopScale()
 {
+    MTML_PSM2_pub.publish(scale);
+    MTMR_PSM3_pub.publish(scale);
+    MTMR_PSM2_pub.publish(scale);
+    MTML_PSM3_pub.publish(scale);
 
+    ROS_INFO("Teleop scale set to: %f", scale.data);
 }
 
 void ReferenceFrame::run()
@@ -317,6 +335,14 @@ void ReferenceFrame::run()
       		switchCount++;
       		ros::Duration(0.3).sleep();
     	}
+
+
+        // setting user-defined scale if any
+        if(scaleSet)
+        {
+            scaleSet = false;
+            setTeleopScale();
+        }
 
 
 #if BROADCAST_TRANSFORMS
