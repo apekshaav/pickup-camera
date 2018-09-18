@@ -25,6 +25,8 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
 
+// TODO: exit program when dvrk console is closed.
+
 
 geometry_msgs::Pose rec_msg_1, rec_msg_2, rec_msg_3;
 std::vector<int> isCam, isHead;

@@ -121,6 +121,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
  include
+  src
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -139,6 +140,11 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/pickup_camera_node.cpp)
 
+add_executable(setPickup src/setPickup.cpp)
+add_executable(vis_frames src/vis_frames.cpp)
+add_executable(setECM src/setECM.cpp)
+add_executable(main src/main.cpp src/ReferenceFrame.cpp)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -149,10 +155,20 @@ include_directories(
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+add_dependencies(setPickup pickup_camera_generate_messages_cpp)
+add_dependencies(vis_frames pickup_camera_generate_messages_cpp)
+add_dependencies(setECM pickup_camera_generate_messages_cpp)
+add_dependencies(main pickup_camera_generate_messages_cpp)
+
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
+
+target_link_libraries(setPickup ${catkin_LIBRARIES})
+target_link_libraries(vis_frames ${catkin_LIBRARIES})
+target_link_libraries(setECM ${catkin_LIBRARIES})
+target_link_libraries(main ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -202,17 +218,4 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(setPickup src/setPickup.cpp)
-add_executable(testPickup src/testPickup.cpp)
-add_executable(vis_frames src/vis_frames.cpp)
-add_executable(setECM src/setECM.cpp)
 
-target_link_libraries(setPickup ${catkin_LIBRARIES})
-target_link_libraries(testPickup ${catkin_LIBRARIES})
-target_link_libraries(vis_frames ${catkin_LIBRARIES})
-target_link_libraries(setECM ${catkin_LIBRARIES})
-
-add_dependencies(setPickup pickup_camera_generate_messages_cpp)
-add_dependencies(testPickup pickup_camera_generate_messages_cpp)
-add_dependencies(vis_frames pickup_camera_generate_messages_cpp)
-add_dependencies(setECM pickup_camera_generate_messages_cpp)
