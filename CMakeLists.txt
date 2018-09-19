@@ -144,6 +144,7 @@ add_executable(setPickup src/setPickup.cpp)
 add_executable(vis_frames src/vis_frames.cpp)
 add_executable(setECM src/setECM.cpp)
 add_executable(main src/main.cpp src/ReferenceFrame.cpp)
+add_executable(setTeleopScale src/setTeleopScale.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -159,6 +160,7 @@ add_dependencies(setPickup pickup_camera_generate_messages_cpp)
 add_dependencies(vis_frames pickup_camera_generate_messages_cpp)
 add_dependencies(setECM pickup_camera_generate_messages_cpp)
 add_dependencies(main pickup_camera_generate_messages_cpp)
+add_dependencies(setTeleopScale pickup_camera_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
@@ -169,6 +171,7 @@ target_link_libraries(setPickup ${catkin_LIBRARIES})
 target_link_libraries(vis_frames ${catkin_LIBRARIES})
 target_link_libraries(setECM ${catkin_LIBRARIES})
 target_link_libraries(main ${catkin_LIBRARIES})
+target_link_libraries(setTeleopScale ${catkin_LIBRARIES})
 
 #############
 ## Install ##
