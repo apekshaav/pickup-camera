@@ -111,7 +111,7 @@ int main(int argc, char **argv)
   ros::Publisher switch_pub = n.advertise<std_msgs::String>("/switch", 1000);
   ros::Publisher teleop_switch_pub = n.advertise<diagnostic_msgs::KeyValue>("/dvrk/console/teleop/select_teleop_psm", 1000);
 
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(100);
 
   int switchFlag = 0;
   int switchCount = 1; 
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
     psm3_pub.publish(msg3);
     // ROS_INFO("Position: [%f %f %f] Orientation: [%f %f %f %f]", msg.position.x, msg.position.y, msg.position.z, msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z);
 
-    if (baseFrameCount%10==0)
+    if (baseFrameCount%100==0)
     	ROS_INFO("Updating base frames of PSM 2 and PSM3...");
     baseFrameCount++;
 

@@ -43,7 +43,7 @@ private:
 	int switchPressed;
 
 	// flags
-	int switchFlag;
+	bool beginSwitch;
 	int switchCount;
 	int baseFrameCount;
 	int regRotFlag;

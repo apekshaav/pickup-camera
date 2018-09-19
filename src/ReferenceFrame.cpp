@@ -16,10 +16,10 @@
 ReferenceFrame::ReferenceFrame()
 {
 	// set loop rate
-	rate = 10; //Hz
+	rate = 100; //Hz
 
 	// initializing flags
-	switchFlag = 0;
+	beginSwitch = true;
   	switchCount = 1; 
   	baseFrameCount = 0;
   	regRotFlag = 0;
@@ -122,6 +122,8 @@ void ReferenceFrame::init()
   	sub3 = n.subscribe("/dvrk/PSM3/position_cartesian_current", 1000, &ReferenceFrame::callbackPSM3, this); // we want position data, including base frame
 #endif
 
+  	ROS_INFO("Finished init");
+
   	setup();
 
 }
@@ -188,9 +190,11 @@ void ReferenceFrame::setup()
 
     // setting registration rotations
     q.w = 0;
-    q.x = 1;
-    q.y = 0;
+    q.x = 0; //1
+    q.y = 1; //0
     q.z = 0;
+
+    ROS_INFO("Finished setup");
 
 }
 	
@@ -262,8 +266,38 @@ void ReferenceFrame::run()
 
 	// where all the work happens
 
+	// setting initial teleop pairs
+    if (beginSwitch)
+    {
+    	beginSwitch = false;
+    	ROS_INFO("Initial switch");
+    	ros::Duration(1).sleep();
+    	switchTeleopPair();
+    }
+
 	while(ros::ok())
 	{
+
+    	// calling all callbacks
+		ros::spinOnce();
+
+    	// publishing registration rotation
+    	if(switchCount%2==1)
+    	{
+	    	MTML_PSM2_rot_pub.publish(q);
+    		MTMR_PSM3_rot_pub.publish(q);
+    	}
+    	else
+    	{
+    		MTMR_PSM2_rot_pub.publish(q);
+    		MTML_PSM3_rot_pub.publish(q);
+    	}
+
+    	if(regRotFlag==0)
+    	{
+        	ROS_INFO("Setting registration rotation for both teleop pairs");
+        	regRotFlag = 1;
+    	}
 
 		// get tooltip 1 position retrieved from subscriber callbackPSM1
     	tf::poseMsgToTF(rec_msg_1, H_Tool1_Base1);
@@ -284,7 +318,7 @@ void ReferenceFrame::run()
     	psm3_pub.publish(msg3);
     	// ROS_INFO("Position: [%f %f %f] Orientation: [%f %f %f %f]", msg3.position.x, msg3.position.y, msg3.position.z, msg3.orientation.w, msg3.orientation.x, msg3.orientation.y, msg3.orientation.z);
 
-    	if (baseFrameCount%10==0)
+    	if (baseFrameCount%100==0)
     		ROS_INFO("Updating base frames of PSM 2 and PSM3...");
     	baseFrameCount++;
 
@@ -292,39 +326,7 @@ void ReferenceFrame::run()
     	if (baseFrameCount==1000)
     		baseFrameCount = 0;
 
-    	if(switchCount%2==1)
-    	{
-	    	MTML_PSM2_rot_pub.publish(q);
-    		MTMR_PSM3_rot_pub.publish(q);
-    	}
-    	else
-    	{
-    		MTMR_PSM2_rot_pub.publish(q);
-    		MTML_PSM3_rot_pub.publish(q);
-    	}
-
-    	if(regRotFlag==0)
-    	{
-        	ROS_INFO("Setting registration rotation for both teleop pairs");
-        	regRotFlag = 1;
-    	}
-
-
-    	// setting initial teleop pairs
-    	std_msgs::String switchString;
-    	std::stringstream stemp;
-    	if (switchFlag==0)
-    	{
-    		ROS_INFO("Initial switch");
-    		ros::Duration(1).sleep();
-    		switchTeleopPair();
-	        stemp << "yes";
-        	switchString.data = stemp.str();
-        	// switch_pub.publish(switchString);
-        	switchFlag = 1;
-        	// ros::Duration(3.30).sleep();
-        	// switchCount++;
-    	}
+    	
 
     	// switching teleop pairs when message is published to topic /pickup/switch
     	if (switchPressed == 1)
@@ -349,7 +351,6 @@ void ReferenceFrame::run()
     	broadcast();
 #endif
 
-    	ros::spinOnce();
     	loop_rate.sleep();
 
 	}
