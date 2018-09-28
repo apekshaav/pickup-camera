@@ -18,14 +18,14 @@ void callback(const std_msgs::Float32::ConstPtr& msg)
 int main(int argc, char **argv)
 {
   
-  ros::init(argc, argv, "setTeleopScale");
+  ros::init(argc, argv, "TeleopScale");
   ros::NodeHandle n;
 
   // subscribers
-  ros::Subscriber scale_sub = n.subscribe("/set_teleop_scale", 1000, callback);
+  ros::Subscriber scale_sub = n.subscribe("/pickup/set_teleop_scale", 1000, callback);
   
   // publishers
-  // ros::Publisher scale_pub = n.advertise<std_msgs::Float32>("/set_teleop_scale", 1000);
+  // ros::Publisher scale_pub = n.advertise<std_msgs::Float32>("/pickup/et_teleop_scale", 1000);
 
   ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::Float32>("/dvrk/MTML_PSM2/set_scale", 1000);
   ros::Publisher MTMR_PSM3_pub = n.advertise<std_msgs::Float32>("/dvrk/MTMR_PSM3/set_scale", 1000);
@@ -42,15 +42,15 @@ int main(int argc, char **argv)
 
     //setting scale
     if(scale_set)
-	{
-		scale_set = false;
-		MTML_PSM2_pub.publish(scale);
+    {
+		  scale_set = false;
+		  MTML_PSM2_pub.publish(scale);
     	MTMR_PSM3_pub.publish(scale);
     	MTMR_PSM2_pub.publish(scale);
-		MTML_PSM3_pub.publish(scale);
+		  MTML_PSM3_pub.publish(scale);
 
-		ROS_INFO("Teleop scale set to: %f", scale.data);
-	}
+		  ROS_INFO("Teleop scale set to: %f", scale.data);
+    }
 
     loop_rate.sleep();
   }

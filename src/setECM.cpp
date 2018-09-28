@@ -47,8 +47,10 @@ int main(int argc, char **argv)
   ros::Publisher psm2_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM2/set_base_frame", 1000);
   ros::Publisher psm3_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM3/set_base_frame", 1000);
   
-  ros::Publisher psm2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
-  ros::Publisher psm3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM3/set_registration_rotation", 1000);
+  ros::Publisher MTML_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
+  ros::Publisher MTMR_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM3/set_registration_rotation", 1000);
+  ros::Publisher MTMR_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM2/set_registration_rotation", 1000);
+  ros::Publisher MTML_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM3/set_registration_rotation", 1000);
 
   ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM2/set_desired_state", 1000);
   ros::Publisher MTMR_PSM1_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM1/set_desired_state", 1000);
@@ -117,7 +119,7 @@ int main(int argc, char **argv)
     msg3.orientation.z = -0.4539;
 
     if (baseFrameCount%10==0)
-      ROS_INFO("Updating base frame of PSM 2 and PSM3...");
+      ROS_INFO("ECM: Updating base frames...");
     baseFrameCount++;
 
     //clearing and resetting every 1000 times
@@ -134,7 +136,8 @@ int main(int argc, char **argv)
     q2.y = -0.7071; 
     q2.z = 0.7071;
 
-    psm2_rot_pub.publish(q2);
+    MTML_PSM2_rot_pub.publish(q2);
+    MTMR_PSM2_rot_pub.publish(q2);
 
     // setting registration rotation of MTMR-PSM3
     geometry_msgs::Quaternion q3;
@@ -143,7 +146,8 @@ int main(int argc, char **argv)
     q3.y = -0.7071; 
     q3.z = 0.7071;
 
-    psm3_rot_pub.publish(q3);
+    MTMR_PSM3_rot_pub.publish(q3);
+    MTML_PSM3_rot_pub.publish(q3);
 
     if(regRotFlag==0)
     {
@@ -160,7 +164,7 @@ int main(int argc, char **argv)
         switchString.data = stemp.str();
         switch_pub.publish(switchString);
         switchFlag = 1;
-        ros::Duration(3.30).sleep();
+        ros::Duration(1).sleep();
         // switchCount++;
     }
 
@@ -244,7 +248,7 @@ int main(int argc, char **argv)
         ros::Duration(1).sleep(); // sleep for a second  
       }
       switchCount++;
-      ros::Duration(0.25).sleep();
+      // ros::Duration(0.25).sleep();
     }
     
     ros::spinOnce();

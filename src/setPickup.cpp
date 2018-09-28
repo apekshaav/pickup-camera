@@ -326,7 +326,7 @@ int main(int argc, char **argv)
     // ROS_INFO("Position: [%f %f %f] Orientation: [%f %f %f %f]", msg.position.x, msg.position.y, msg.position.z, msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z);
 
     if (baseFrameCount%100==0)
-    	ROS_INFO("Updating base frames of PSM 2 and PSM3...");
+    	ROS_INFO("Pickup: Updating base frames...");
     baseFrameCount++;
 
     //clearing and resetting every 1000 times
@@ -401,7 +401,7 @@ int main(int argc, char **argv)
         switchString.data = stemp.str();
         switch_pub.publish(switchString);
         switchFlag = 1;
-        ros::Duration(3.30).sleep();
+        ros::Duration(1).sleep();
         // switchCount++;
     }
 
@@ -523,7 +523,7 @@ int main(int argc, char **argv)
         ros::Duration(1).sleep(); // sleep for a second  
       }
       switchCount++;
-      ros::Duration(0.25).sleep();
+      // ros::Duration(0.25).sleep();
     }
 	
 
