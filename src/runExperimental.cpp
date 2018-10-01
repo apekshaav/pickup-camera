@@ -176,8 +176,8 @@ int main(int argc, char **argv)
 
   ros::Rate loop_rate(100);
 
-  int switchFlag = 1;
-  int camCount = 1;
+  int switchFlag = 0;
+  int camCount = 0;
   int switchCount = 1; 
   int baseFrameCount = 0;
   int regRotFlag = 0;
