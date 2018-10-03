@@ -150,8 +150,6 @@ add_executable(setTeleopScale src/setTeleopScale.cpp)
 add_executable(control src/runControl.cpp)
 add_executable(experimental src/runExperimental.cpp)
 
-add_executable(move src/MovePickup_main.cpp src/MovePickup.cpp)
-
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -172,8 +170,6 @@ add_dependencies(setTeleopScale pickup_camera_generate_messages_cpp)
 add_dependencies(control pickup_camera_generate_messages_cpp)
 add_dependencies(experimental pickup_camera_generate_messages_cpp)
 
-add_dependencies(move pickup_camera_generate_messages_cpp)
-
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
@@ -189,7 +185,6 @@ target_link_libraries(setTeleopScale ${catkin_LIBRARIES})
 target_link_libraries(control ${catkin_LIBRARIES})
 target_link_libraries(experimental ${catkin_LIBRARIES})
 
-target_link_libraries(move ${catkin_LIBRARIES})
 
 #############
 ## Install ##
