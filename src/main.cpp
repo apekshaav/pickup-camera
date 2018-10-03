@@ -1,12 +1,14 @@
-#include "ReferenceFrame.h"
+#include "MovePickup.h"
 
 int main(int argc, char *argv[])
 {
 
-	ros::init(argc, argv, "setReferenceFrame");
+	ros::init(argc, argv, "MovePickup");
 
-	ReferenceFrame rf;
-	rf.run();
+	MovePickup mv;
+
+	ros::Duration(1).sleep();
+	mv.run();
 
 	return 0;
 }
