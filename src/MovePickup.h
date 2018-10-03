@@ -26,10 +26,10 @@ public:
 	void run();
 
 private:
-	geometry_msgs::Pose ToolTip_msg, CamPos_msg, NewCamPos_msg, temp;
+	geometry_msgs::Pose ToolTipPos_msg, CamPos_msg, NewCamPos_msg, NewToolTipPos_msg;
 	
-	tf::Transform ToolTip, CamPos, NewCamPos;
-	tf::Transform H_ToolTip_Cam;
+	tf::Transform ToolTipPos, CamPos, NewCamPos, NewToolTipPos;
+	tf::Transform H_ToolTip_Cam, H_Cam_ToolTip;
 	
 	tf::Quaternion InputRotation;
 
