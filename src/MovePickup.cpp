@@ -121,7 +121,7 @@ void MovePickup::MoveToPos()
 
 void MovePickup::run()
 {
-	ros::Rate loop_rate(0.5);
+	ros::Rate loop_rate(10);
 
 	while(ros::ok())
 	{
