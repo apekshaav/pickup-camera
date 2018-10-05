@@ -110,7 +110,7 @@ void MovePickup::MoveToPos()
     // for translation----
     NewToolTipPos_msg.position.x = ToolTipPos_msg.position.x + InputPose.position.x;
     NewToolTipPos_msg.position.y = ToolTipPos_msg.position.y + InputPose.position.y;
-    NewToolTipPos_msg.position.z = ToolTipPos_msg.position.z - InputPose.position.z;
+    NewToolTipPos_msg.position.z = ToolTipPos_msg.position.z + InputPose.position.z;
 
     // move to new position
     goal_pub.publish(NewToolTipPos_msg);
