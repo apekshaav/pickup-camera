@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 	MovePickup mv;
 
 	// sleep to allow subscribers to poll published data
-	ros::Duration(5).sleep();
+	ros::Duration(1).sleep();
 	mv.run();
 
 	return 0;
