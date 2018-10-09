@@ -22,8 +22,8 @@ void MovePickup::callbackPSM(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
 void MovePickup::callbackInputPose(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
-    newInput = true;
-    InputPose = msg->pose;
+    newTopicInput = true;
+    TopicInputPose = msg->pose;
 }
 
 void MovePickup::callbackJaw(const sensor_msgs::JointState::ConstPtr& msg)
@@ -47,8 +47,9 @@ void MovePickup::init()
     jaw_pub = n.advertise<sensor_msgs::JointState>("/dvrk/PSM1/set_position_goal_jaw", 1000);
     input_pub = n.advertise<geometry_msgs::PoseStamped>("/pickup/set_input", 1000);
 
-    // initialize flag
-    newInput = false;
+    // initialize flags
+    newTopicInput = false;
+    newSensorInput = false;
     jawSet = true;
 
  	// camera frame, H_ToolTip_Cam
@@ -66,7 +67,7 @@ void MovePickup::init()
 }
 
 #if 0
-void MovePickup::SetInputRotation()
+void MovePickup::SetInput()
 {
     InputRotation = tf::createQuaternionFromRPY(0, 0, 0.17); // in radians
     InputRotation.normalize();
@@ -76,7 +77,8 @@ void MovePickup::SetInputRotation()
 }
 #endif
 
-void MovePickup::MoveToPos()
+
+void MovePickup::MoveBy(geometry_msgs::Pose InputPose)
 {
 
 	// update tooltip position
@@ -119,8 +121,55 @@ void MovePickup::MoveToPos()
 
 }
 
+void MovePickup::error(const char *msg)
+{
+    perror(msg);
+    exit(1);
+}
+
 void MovePickup::run()
 {
+    // initialize socket variables
+    int sockfd, newsockfd, portno;
+    socklen_t clilen;
+    char data[28];
+    struct sockaddr_in serv_addr, cli_addr;
+    int n;
+
+    sensor_pose newpose;
+
+    // initializing socket
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (sockfd < 0) 
+        error("ERROR opening socket");
+
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    
+    // set server details
+    portno = 12345;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(portno);
+    
+    // bind socket to server
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+        error("ERROR on binding");
+
+
+#if SOCKET_ENABLED
+    // listen for clients
+    listen(sockfd,5);
+    clilen = sizeof(cli_addr);
+    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+
+    if (newsockfd < 0) 
+        error("ERROR on accept");
+
+    ROS_INFO("Client connected");
+#endif
+
+
 	ros::Rate loop_rate(10);
 
 	while(ros::ok())
@@ -142,16 +191,51 @@ void MovePickup::run()
             jaw_pub.publish(JawState);
         }
 
-        if(newInput)
-        {
-            ROS_INFO("Input recieved");
-            newInput = false;
+#if SOCKET_ENABLED
+        // read data from client
+        n = read(newsockfd,data,28);
 
-            MoveToPos();
+        if (n < 0) 
+            error("ERROR reading from socket");
+        else
+        {
+            // newSensorInput = true;
+            sensor_pose * newpose = (sensor_pose*) data;
+            SensorInputPose.position.x = newpose->xpos;
+            SensorInputPose.position.y = newpose->ypos;
+            SensorInputPose.position.z = newpose->zpos;
+
+            SensorInputPose.orientation.w = newpose->qw;
+            SensorInputPose.orientation.x = newpose->qx;
+            SensorInputPose.orientation.y = newpose->qy;
+            SensorInputPose.orientation.z = newpose->qz;
+
+            ROS_INFO("Position = [%f %f %f] Orientation = [%f %f %f %f]", SensorInputPose.position.x, SensorInputPose.position.y, SensorInputPose.position.z, SensorInputPose.orientation.w, SensorInputPose.orientation.x, SensorInputPose.orientation.y, SensorInputPose.orientation.z);
+            break;
+        }
+#endif
+
+        if(newSensorInput)
+        {
+            ROS_INFO("Input recieved from sensor");
+            newSensorInput = false;
+
+            MoveBy(SensorInputPose);
+        }
+
+        if(newTopicInput)
+        {
+            ROS_INFO("Input recieved from ROS topic");
+            newTopicInput = false;
+
+            MoveBy(TopicInputPose);
         }
 
 		loop_rate.sleep();
 	}
+
+    // terminate socket
+    close(sockfd);
 
 }
 

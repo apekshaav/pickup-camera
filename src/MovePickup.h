@@ -12,10 +12,33 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/JointState.h>
 
-//TF
+// TF
 #include <tf/tf.h>
 #include <tf/transform_datatypes.h>
 #include <tf2/LinearMath/Quaternion.h>
+
+// Sockets
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h> 
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+#define SOCKET_ENABLED true
+
+typedef struct sensor_pose
+{
+    float xpos;
+    float ypos;
+    float zpos;
+
+    float qw;
+    float qx;
+    float qy;
+    float qz;
+}sensor_pose;
 
 class MovePickup
 {
@@ -23,18 +46,19 @@ public:
 	MovePickup();
 	~MovePickup();
 
-	void SetInputRotation();
+	void SetInput();
 	void run();
 
 private:
 
 	// flags
-	bool newInput;
+	bool newTopicInput;
+	bool newSensorInput;
 	bool jawSet;
 
 	// ROS messages
 	geometry_msgs::Pose ToolTipPos_msg, CamPos_msg, NewCamPos_msg, NewToolTipPos_msg;
-	geometry_msgs::Pose InputPose;
+	geometry_msgs::Pose TopicInputPose, SensorInputPose;
 	double JawPosition;
 	
 	// Transforms
@@ -52,7 +76,8 @@ private:
 	void callbackInputPose(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
 	void init();
-	void MoveToPos();
+	void error(const char *msg);
+	void MoveBy(geometry_msgs::Pose InputPose);
 
 };
 

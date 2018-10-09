@@ -143,6 +143,7 @@ include_directories(
 add_executable(vis_frames src/vis_frames.cpp)
 add_executable(setTeleopScale src/setTeleopScale.cpp)
 add_executable(move src/main.cpp src/MovePickup.cpp)
+add_executable(client src/client.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -157,6 +158,7 @@ add_executable(move src/main.cpp src/MovePickup.cpp)
 add_dependencies(vis_frames pickup_camera_generate_messages_cpp)
 add_dependencies(setTeleopScale pickup_camera_generate_messages_cpp)
 add_dependencies(move pickup_camera_generate_messages_cpp)
+add_dependencies(client pickup_camera_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
@@ -166,6 +168,7 @@ add_dependencies(move pickup_camera_generate_messages_cpp)
 target_link_libraries(vis_frames ${catkin_LIBRARIES})
 target_link_libraries(setTeleopScale ${catkin_LIBRARIES})
 target_link_libraries(move ${catkin_LIBRARIES})
+target_link_libraries(client ${catkin_LIBRARIES})
 
 #############
 ## Install ##
