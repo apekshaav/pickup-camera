@@ -115,7 +115,7 @@ void MovePickup::MoveBy(geometry_msgs::Pose InputPose)
     NewToolTipPos_msg.position.z = ToolTipPos_msg.position.z + InputPose.position.z;
 
     // move to new position
-    goal_pub.publish(NewToolTipPos_msg);
+    // goal_pub.publish(NewToolTipPos_msg);
     ROS_INFO("New position updated");
     ROS_INFO("NewToolTipPos: Position: [%f %f %f] Orientation: [%f %f %f %f]", NewToolTipPos_msg.position.x, NewToolTipPos_msg.position.y, NewToolTipPos_msg.position.z, NewToolTipPos_msg.orientation.w, NewToolTipPos_msg.orientation.x, NewToolTipPos_msg.orientation.y, NewToolTipPos_msg.orientation.z);
 
@@ -199,7 +199,7 @@ void MovePickup::run()
             error("ERROR reading from socket");
         else
         {
-            // newSensorInput = true;
+            newSensorInput = true;
             sensor_pose * newpose = (sensor_pose*) data;
             SensorInputPose.position.x = newpose->xpos;
             SensorInputPose.position.y = newpose->ypos;
@@ -211,7 +211,7 @@ void MovePickup::run()
             SensorInputPose.orientation.z = newpose->qz;
 
             ROS_INFO("Position = [%f %f %f] Orientation = [%f %f %f %f]", SensorInputPose.position.x, SensorInputPose.position.y, SensorInputPose.position.z, SensorInputPose.orientation.w, SensorInputPose.orientation.x, SensorInputPose.orientation.y, SensorInputPose.orientation.z);
-            break;
+            // break;
         }
 #endif
 
