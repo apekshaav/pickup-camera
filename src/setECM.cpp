@@ -1,36 +1,23 @@
 /**
  * This script is used to send the transform (position, quaternion) to set the base transform 
- * of the two da Vinci arms PSM2 (Green Arm) and PSM3 (Red Arm) with respect to the endoscope (ECM tip coordinate frame).
+ * of the two da Vinci arms PSM1 (Yellow Arm) and PSM2 (Yellow Arm) with respect to the endoscope (ECM tip coordinate frame).
  */
-
-#include <vector>
-#include <sstream>
 
 // ROS
 #include <ros/ros.h>
-#include <std_msgs/String.h>
 #include <geometry_msgs/Pose.h>
-#include <diagnostic_msgs/KeyValue.h>
-#include <sensor_msgs/Joy.h>
 
 // TF
-#include <tf2/LinearMath/Quaternion.h>
+#include <tf/tf.h>
 
-std::vector<int> isHead;
-int headPressed, switchPressed;
+geometry_msgs::Pose rec_pose;
 
-void callbackHead(const sensor_msgs::Joy::ConstPtr& msg)
+void callbackECM(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
-  isHead = msg->buttons;
-  headPressed = isHead[0];
+  
+  // storing only pose not timestamp details
+  rec_pose = msg->pose;
 
-  ROS_INFO("Head pressed: %d", headPressed);
-}
-
-void callbackSwitch(const std_msgs::String::ConstPtr& msg)
-{
-  switchPressed = 1;
-  ROS_INFO("Switching enabled: %s", msg->data.c_str());
 }
 
 int main(int argc, char **argv)
@@ -40,85 +27,98 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
 
   // subscribers
-  ros::Subscriber head_sub = n.subscribe("/dvrk/footpedals/operatorpresent", 1000, callbackHead);
-  ros::Subscriber switch_sub = n.subscribe("/switch", 1000, callbackSwitch);
+  ros::Subscriber ECM_sub = n.subscribe("/dvrk/ECM/position_cartesian_local_current", 1000, callbackECM);
   
   // publishers
-  ros::Publisher psm2_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM2/set_base_frame", 1000);
-  ros::Publisher psm3_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM3/set_base_frame", 1000);
+  ros::Publisher PSM1_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM1/set_base_frame", 1000);
+  ros::Publisher PSM2_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM2/set_base_frame", 1000);
+  // ros::Publisher psm3_pub = n.advertise<geometry_msgs::Pose>("/dvrk/PSM3/set_base_frame", 1000);
   
   ros::Publisher MTML_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM2/set_registration_rotation", 1000);
-  ros::Publisher MTMR_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM3/set_registration_rotation", 1000);
-  ros::Publisher MTMR_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM2/set_registration_rotation", 1000);
-  ros::Publisher MTML_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM3/set_registration_rotation", 1000);
+  ros::Publisher MTMR_PSM1_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM1/set_registration_rotation", 1000);
+  // ros::Publisher MTMR_PSM2_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTMR_PSM2/set_registration_rotation", 1000);
+  // ros::Publisher MTML_PSM3_rot_pub = n.advertise<geometry_msgs::Quaternion>("/dvrk/MTML_PSM3/set_registration_rotation", 1000);
+ 
+  // initialize
 
-  ros::Publisher MTML_PSM2_pub = n.advertise<std_msgs::String>("/dvrk/MTML_PSM2/set_desired_state", 1000);
-  ros::Publisher MTMR_PSM1_pub = n.advertise<std_msgs::String>("/dvrk/MTMR_PSM1/set_desired_state", 1000);
+  // transform from PSM1 Base Frame to ECM base frame
+  geometry_msgs::Pose temp1;
+  temp1.position.x = -0.1295;
+  temp1.position.y = -0.1103;
+  temp1.position.z = -0.0706;
+  temp1.orientation.w = 0.8736;
+  temp1.orientation.x = 0.3466;
+  temp1.orientation.y = 0.0983;
+  temp1.orientation.z = -0.3272;
 
-  ros::Publisher switch_pub = n.advertise<std_msgs::String>("/switch", 1000);
-  ros::Publisher teleop_switch_pub = n.advertise<diagnostic_msgs::KeyValue>("/dvrk/console/teleop/select_teleop_psm", 1000);
+  tf::Pose ECM_Base_H_PSM1_Base;
+  tf::poseMsgToTF(temp1, ECM_Base_H_PSM1_Base);
+
+  // transform from PSM2 Base Frame to ECM base frame
+  geometry_msgs::Pose temp2;
+  temp2.position.x = 0.0896;
+  temp2.position.y = -0.0979;
+  temp2.position.z = -0.0776;
+  temp2.orientation.w = 0.8139;
+  temp2.orientation.x = 0.3779;
+  temp2.orientation.y = -0.1322;
+  temp2.orientation.z = 0.4212;
+
+  tf::Pose ECM_Base_H_PSM2_Base;
+  tf::poseMsgToTF(temp2, ECM_Base_H_PSM2_Base);
+
+  // setting registration rotation of MTML-PSM2
+  geometry_msgs::Quaternion q2;
+  q2.w = 0;
+  q2.x = 0;
+  q2.y = 1; 
+  q2.z = 0;
+
+  // setting registration rotation of MTMR-PSM1
+  geometry_msgs::Quaternion q1;
+  q1.w = 0;
+  q1.x = 0;
+  q1.y = 1; 
+  q1.z = 0;
+
+  ros::Rate loop_rate(100);
   
-  
-  ros::Rate loop_rate(10);
-  
-  int switchFlag = 0;
-  int switchCount = 0;
   int baseFrameCount = 0;
   int regRotFlag = 0;
   while (ros::ok())
   {
-    
+   
+    // subscribers poll data here
+    ros::spinOnce();
 
-  /*	//setting initial teleop pairs to MTML-PSM2 and MTMR-PSM3
-	diagnostic_msgs::KeyValue teleopPair;
-    if (switchFlag == 0)
-    {	
+    // ROS_INFO("PSM1: Position: [%f %f %f] Orientation: [%f %f %f %f]", temp1.position.x, temp1.position.y, temp1.position.z, temp1.orientation.w, temp1.orientation.x, temp1.orientation.y, temp1.orientation.z);
+    // ROS_INFO("PSM2: Position: [%f %f %f] Orientation: [%f %f %f %f]", temp2.position.x, temp2.position.y, temp2.position.z, temp2.orientation.w, temp2.orientation.x, temp2.orientation.y, temp2.orientation.z);
 
-      ros::Duration(1.5).sleep();
-      teleopPair.key = "MTML";
-      teleopPair.value = "";
-      teleop_switch_pub.publish(teleopPair);
-      ROS_INFO("Switching has begun...");
-      ros::Duration(1).sleep(); // sleep for a second
+    // udpate ECM tip data retrieved from subscriber
+    tf::Pose ECM_Base_H_ECM_Tip;
+    tf::poseMsgToTF(rec_pose, ECM_Base_H_ECM_Tip);
+    // ROS_INFO("Position: [%f %f %f] Orientation: [%f %f %f %f]", rec_pose.position.x, rec_pose.position.y, rec_pose.position.z, rec_pose.orientation.w, rec_pose.orientation.x, rec_pose.orientation.y, rec_pose.orientation.z);
+    tf::Transform ECM_Tip_H_ECM_Base = ECM_Base_H_ECM_Tip.inverse();
+    geometry_msgs::Pose test;
+    quaternionTFToMsg(ECM_Tip_H_ECM_Base.getRotation(), test.orientation);
+    // ROS_INFO("Inv: Position: [%f %f %f] Orientation: [%f %f %f %f]", ECM_Tip_H_ECM_Base.getOrigin().getX(), ECM_Base_H_ECM_Tip.getOrigin().getY(), ECM_Base_H_ECM_Tip.getOrigin().getZ(), test.orientation.w, test.orientation.x, test.orientation.y, test.orientation.z);
 
-      teleopPair.key = "MTMR";
-      teleopPair.value = "PSM3";
-      teleop_switch_pub.publish(teleopPair);
-      // ROS_INFO("...");
-      ros::Duration(1).sleep(); // sleep for a second
+    // transformation chains for PSM1,2
+    tf::Pose ECM_Tip_H_PSM1_Base = ECM_Tip_H_ECM_Base * ECM_Base_H_PSM1_Base;
+    tf::Pose ECM_Tip_H_PSM2_Base = ECM_Tip_H_ECM_Base * ECM_Base_H_PSM2_Base;
 
-      teleopPair.key = "MTML";
-      teleopPair.value = "PSM2";
-      teleop_switch_pub.publish(teleopPair);
-      ROS_INFO("Switching has finished.");
-      ros::Duration(1).sleep(); // sleep for a second  
-
-      switchFlag = 1;
-    }
-  */  
-
-    // transform from PSM2 Base Frame to ECM tip frame
+    // converting to geometry msgs to send to ROS topic
+    // for PSM1
+    geometry_msgs::Pose msg1;
+    tf::poseTFToMsg(ECM_Tip_H_PSM1_Base, msg1);
+    // for PSM2
     geometry_msgs::Pose msg2;
-    msg2.position.x = 0.2282;
-    msg2.position.y = 0.2876;
-    msg2.position.z = 1.4630;
-    msg2.orientation.w = 0.6442;
-    msg2.orientation.x = 0.5436;
-    msg2.orientation.y = -0.3745;
-    msg2.orientation.z = 0.3862;
+    tf::poseTFToMsg(ECM_Tip_H_PSM2_Base, msg2);
 
+    // ROS_INFO("Chain 1: Position: [%f %f %f] Orientation: [%f %f %f %f]", msg1.position.x, msg1.position.y, msg1.position.z, msg1.orientation.w, msg1.orientation.x, msg1.orientation.y, msg1.orientation.z);
+    // ROS_INFO("Chain 2: Position: [%f %f %f] Orientation: [%f %f %f %f]", msg2.position.x, msg2.position.y, msg2.position.z, msg2.orientation.w, msg2.orientation.x, msg2.orientation.y, msg2.orientation.z);
 
-    // transform from PSM3 Base Frame to ECM tip frame
-    geometry_msgs::Pose msg3;
-    msg3.position.x = 0.0037;
-    msg3.position.y = -0.0169;
-    msg3.position.z = 1.5176;
-    msg3.orientation.w = 0.5814;
-    msg3.orientation.x = 0.5487;
-    msg3.orientation.y = 0.3935;
-    msg3.orientation.z = -0.4539;
-
-    if (baseFrameCount%10==0)
+    if (baseFrameCount%100==0)
       ROS_INFO("ECM: Updating base frames...");
     baseFrameCount++;
 
@@ -126,28 +126,12 @@ int main(int argc, char **argv)
     if (baseFrameCount==1000)
         baseFrameCount = 0;
 
-    psm2_pub.publish(msg2);
-    psm3_pub.publish(msg3);
+    PSM1_pub.publish(msg1);
+    PSM2_pub.publish(msg2);
 
-    // setting registration rotation of MTML-PSM2
-    geometry_msgs::Quaternion q2;
-    q2.w = 0;
-    q2.x = 0;
-    q2.y = -0.7071; 
-    q2.z = 0.7071;
-
+    // publishing registration rotations
     MTML_PSM2_rot_pub.publish(q2);
-    MTMR_PSM2_rot_pub.publish(q2);
-
-    // setting registration rotation of MTMR-PSM3
-    geometry_msgs::Quaternion q3;
-    q3.w = 0;
-    q3.x = 0;
-    q3.y = -0.7071; 
-    q3.z = 0.7071;
-
-    MTMR_PSM3_rot_pub.publish(q3);
-    MTML_PSM3_rot_pub.publish(q3);
+    MTMR_PSM1_rot_pub.publish(q1);
 
     if(regRotFlag==0)
     {
@@ -155,103 +139,6 @@ int main(int argc, char **argv)
       regRotFlag = 1;
     }
 
-    std_msgs::String switchString;
-    std::stringstream stemp;
-    // switching teleop pairs first:
-    if (switchFlag==0)
-    {
-        stemp << "yes";
-        switchString.data = stemp.str();
-        switch_pub.publish(switchString);
-        switchFlag = 1;
-        ros::Duration(1).sleep();
-        // switchCount++;
-    }
-
-    // TELEOPERATION LOGIC ------
-    // During teleoperation:
-    // * Head sensor is required to enable the teleoperation of MTMR-PSM1 (camera arm)
-    //    - Callback to subscribe to topic /dvrk/footpedals/operatorpresent.
-    //    - The messages received are the form sensor_msgs/Joy. The 'buttons' value indicates head sensed (1) or not (0).
-    // * MTML-PSM2 (non-camera arm) remains frozen all the time, even when head is sensed.
-
-    /*std_msgs::String MTML_PSM2_State, MTMR_PSM1_State;
-    std::stringstream s1, s2, ss;
-
-    // checking for presence of operator (head)
-    if (headPressed == 1)
-    {
-      // freezing MTML-PSM2 teleop // freezing pickup camera arm teleop
-        s1 << "ALIGNING_MTM";
-        MTML_PSM2_State.data = s1.str();
-
-        // enabling MTMR-PSM1 teleop // enabling non-pickup camera arm teleop
-        s2 << "ENABLED";
-          MTMR_PSM1_State.data = s2.str();
-    }
-    else
-    {
-      // freezing all teleops
-      ss << "ALIGNING_MTM";
-      MTMR_PSM1_State.data = ss.str();
-      MTML_PSM2_State.data = ss.str();
-    }
-
-    MTMR_PSM1_pub.publish(MTMR_PSM1_State);
-    MTML_PSM2_pub.publish(MTML_PSM2_State); 
-    */
-
-
-    diagnostic_msgs::KeyValue teleopPair;
-    // switching teleop pairs when message is published to topic /switch
-    if (switchPressed == 1)
-    { 
-      switchPressed = 0;
-      if (switchCount%2==1)
-      {
-        teleopPair.key = "MTML";
-        teleopPair.value = "";
-        teleop_switch_pub.publish(teleopPair);
-        ROS_INFO("Switching has begun...");
-        ros::Duration(1).sleep(); // sleep for a second
-
-        teleopPair.key = "MTMR";
-        teleopPair.value = "PSM2";
-        teleop_switch_pub.publish(teleopPair);
-        // ROS_INFO("...");
-        ros::Duration(1).sleep(); // sleep for a second
-
-        teleopPair.key = "MTML";
-        teleopPair.value = "PSM3";
-        teleop_switch_pub.publish(teleopPair);
-        ROS_INFO("Switching has finished.");
-        ros::Duration(1).sleep(); // sleep for a second  
-      }
-      else
-      {
-        teleopPair.key = "MTML";
-        teleopPair.value = "";
-        teleop_switch_pub.publish(teleopPair);
-        ROS_INFO("Switching has begun...");
-        ros::Duration(1).sleep(); // sleep for a second
-
-        teleopPair.key = "MTMR";
-        teleopPair.value = "PSM3";
-        teleop_switch_pub.publish(teleopPair);
-        // ROS_INFO("...");
-        ros::Duration(1).sleep(); // sleep for a second
-
-        teleopPair.key = "MTML";
-        teleopPair.value = "PSM2";
-        teleop_switch_pub.publish(teleopPair);
-        ROS_INFO("Switching has finished.");
-        ros::Duration(1).sleep(); // sleep for a second  
-      }
-      switchCount++;
-      // ros::Duration(0.25).sleep();
-    }
-    
-    ros::spinOnce();
 
     loop_rate.sleep();
   }
