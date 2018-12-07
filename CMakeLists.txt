@@ -145,6 +145,7 @@ add_executable(vis_frames src/vis_frames.cpp)
 add_executable(setECM src/setECM.cpp)
 
 add_executable(main src/main.cpp src/ReferenceFrame.cpp)
+add_executable(stream src/DVRKData_main.cpp src/DVRKData.cpp)
 
 add_executable(setTeleopScale src/setTeleopScale.cpp)
 add_executable(control src/runControl.cpp)
@@ -165,6 +166,7 @@ add_dependencies(vis_frames pickup_camera_generate_messages_cpp)
 add_dependencies(setECM pickup_camera_generate_messages_cpp)
 
 add_dependencies(main pickup_camera_generate_messages_cpp)
+add_dependencies(stream pickup_camera_generate_messages_cpp)
 
 add_dependencies(setTeleopScale pickup_camera_generate_messages_cpp)
 add_dependencies(control pickup_camera_generate_messages_cpp)
@@ -180,6 +182,7 @@ target_link_libraries(vis_frames ${catkin_LIBRARIES})
 target_link_libraries(setECM ${catkin_LIBRARIES})
 
 target_link_libraries(main ${catkin_LIBRARIES})
+target_link_libraries(stream ${catkin_LIBRARIES})
 
 target_link_libraries(setTeleopScale ${catkin_LIBRARIES})
 target_link_libraries(control ${catkin_LIBRARIES})
