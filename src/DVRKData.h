@@ -2,7 +2,13 @@
 #define DVRK_DATA_H
 
 #include <stdio.h>
-// #include <fstream.h>
+#include <string>
+#include <ios>
+#include <iostream>
+#include <fstream>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 
 // ROS
 #include <ros/ros.h>
@@ -48,6 +54,7 @@ private:
 	int rate;
 	bool save;
 	int count;
+	std::string filePath;
 
 
 	// Callback functions

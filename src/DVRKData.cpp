@@ -7,6 +7,13 @@
 
 #include "DVRKData.h"
 
+typedef struct RobotData
+{
+	float tipx;
+	float tipy;
+	float tipz;
+} RobotData;
+
 DVRKData::DVRKData()
 {
 	// set loop rate
@@ -24,6 +31,20 @@ DVRKData::DVRKData()
     temp.orientation.y = 0.0742;
     temp.orientation.z = 0.7171;
     tf::poseMsgToTF(temp, PSM1_H_PSM2);
+
+    // creating directory to store data
+    filePath = "/home/davinci3/catkin_ws_1_6/src/pickup_camera/src/Data/";
+    // int status;
+	// status = mkdir("~/catkin_ws_1_6/src/pickup_camera/src/Data", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	// ROS_INFO("Status: %d", status);
+
+
+	// if(mkdir(filePath.c_str(), 2) == -1) //creating a directory
+	// {
+	// 	ROS_INFO("Error: Unable to create directory");
+	// 	exit(1);
+	// }
+
 	
 	ROS_INFO("Initialized!");	
 
@@ -70,14 +91,64 @@ void DVRKData::startSubscribing()
 
 void DVRKData::saveToFile()
 {
-	ROS_INFO("Point: [%f %f %f]", psm2_tooltip_in_psm1.getX(), psm2_tooltip_in_psm1.getY(), psm2_tooltip_in_psm1.getZ());
-	// save to dvrk_data.dat
-	// char filename[50];
-	// sprintf(buffer, "dvrk_data_%d.dat",count);
+	
+	RobotData out_data;
+	out_data.tipx = psm2_tooltip_in_psm1.getX();
+	out_data.tipy = psm2_tooltip_in_psm1.getY();
+	out_data.tipz = psm2_tooltip_in_psm1.getZ();
 
-	// open file
-	// ofstream myFile ("data.bin", ios::out | ios::binary);
-    // myFile.write (buffer, 100);
+	ROS_INFO("Point: [%f %f %f]", out_data.tipx, out_data.tipy, out_data.tipz);
+	
+	// save to dvrk_data.dat	
+	std::string fileName;
+	std::string file;	
+
+	// fileName = filePath + std::to_string(count) + "/";
+
+	// if(mkdir(fileName.c_str(), 2) == -1) //creating a directory
+	// {
+	// 	ROS_INFO("Error: Unable to create directory");
+	// 	exit(1);
+	// }
+
+	// count++;
+
+	file = filePath + "dvrk_api_" + std::to_string(count) + ".dat";
+	ROS_INFO("%s", file.c_str());
+
+	std::ofstream outputStream;
+
+	// outputStream.open(file.c_str(), std::ios::out);	// create file
+	// outputStream.close();	
+
+	outputStream.open(file.c_str(), std::ofstream::out | std::ofstream::app); // reopen for editing
+	
+	outputStream.write((const char*)&out_data.tipx, sizeof(float));
+	outputStream.write((const char*)&out_data.tipy, sizeof(float));
+	outputStream.write((const char*)&out_data.tipz, sizeof(float));
+	// outputStream.write((const char*)&psm2_tooltip_in_psm1.getY(), sizeof(float));
+	// outputStream.write((const char*)&psm2_tooltip_in_psm1.getZ(), sizeof(float));
+	
+	outputStream.close();
+
+
+	/* some sample code
+	std::fstream someFile;
+	someFile.open("testBin.dat", std::ios::out | std::ios::in);
+	if (someFile.fail())
+	{
+		// No File Exists
+		// cout << "Whoopsie!\n";
+		someFile.clear(); // Clear Flag
+		someFile.open("testBin.dat", std::ios::out); // Create File
+		someFile.close();
+		someFile.open("testBin.dat", std::ios::out | std::ios::in); // Reopen for editing
+	}
+
+	someFile << "Cheeseburgers are wonderful indeed.";
+	someFile.close();
+	*/
+
     ROS_INFO("Saved!");
 	
 }
